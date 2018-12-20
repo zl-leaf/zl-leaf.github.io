@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="主流的日志收集方案是使用ELK进行收集，要使用此方案收集docker容器的日志，网络上有很多的教程，当中不乏复制粘贴出来的文章，当中存在一些坑在网上的教程是没有提及的，例如如何过滤不需要的docker容器日志。通过自身实践（此站点使用着这个方案），使用filebeat收集日志数据，并且使用ELK进行数据处理，总结出此文章以做分享。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="采集docker-container日志">
+<meta property="og:url" content="http://yipzale.me/2018/02/24/collect-docker-container-log.html">
+<meta property="og:site_name" content="yipzale.me">
+<meta property="og:description" content="主流的日志收集方案是使用ELK进行收集，要使用此方案收集docker容器的日志，网络上有很多的教程，当中不乏复制粘贴出来的文章，当中存在一些坑在网上的教程是没有提及的，例如如何过滤不需要的docker容器日志。通过自身实践（此站点使用着这个方案），使用filebeat收集日志数据，并且使用ELK进行数据处理，总结出此文章以做分享。">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="http://res2.yipzale.me/QQ20180224-135142.png">
+<meta property="og:image" content="http://res2.yipzale.me/QQ20180224-135142.png">
+<meta property="og:image" content="http://res2.yipzale.me/QQ20180224-213113.png">
+<meta property="og:updated_time" content="2018-12-20T16:39:40.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="采集docker-container日志">
+<meta name="twitter:description" content="主流的日志收集方案是使用ELK进行收集，要使用此方案收集docker容器的日志，网络上有很多的教程，当中不乏复制粘贴出来的文章，当中存在一些坑在网上的教程是没有提及的，例如如何过滤不需要的docker容器日志。通过自身实践（此站点使用着这个方案），使用filebeat收集日志数据，并且使用ELK进行数据处理，总结出此文章以做分享。">
+<meta name="twitter:image" content="http://res2.yipzale.me/QQ20180224-135142.png">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yipzale.me/2018/02/24/collect-docker-container-log.html">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>采集docker-container日志 | yipzale.me</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">yipzale.me</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="Toggle navigation bar">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>Home</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>Archives</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2018/02/24/collect-docker-container-log.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="yipzale">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="yipzale.me">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">采集docker-container日志
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2018-02-24 00:00:00" itemprop="dateCreated datePublished" datetime="2018-02-24T00:00:00+08:00">2018-02-24</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Edited on</span>
+                
+                <time title="Modified: 2018-12-21 00:39:40" itemprop="dateModified" datetime="2018-12-21T00:39:40+08:00">2018-12-21</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>主流的日志收集方案是使用ELK进行收集，要使用此方案收集docker容器的日志，网络上有很多的教程，当中不乏复制粘贴出来的文章，当中存在一些坑在网上的教程是没有提及的，例如如何过滤不需要的docker容器日志。通过自身实践（此站点使用着这个方案），使用filebeat收集日志数据，并且使用ELK进行数据处理，总结出此文章以做分享。</p>
+<a id="more"></a>
+<hr>
+<p>后续在使用过程中发现filebeat不太好用，所以转成了fluentd，<a href="/2018/04/22/fluentd-collect-dockerlog.html">请看</a></p>
+<h2 id="工具"><a href="#工具" class="headerlink" title="工具"></a>工具</h2><h3 id="filebeat"><a href="#filebeat" class="headerlink" title="filebeat"></a>filebeat</h3><p>  轻量的数据收集工具。收集数据，做一些简单的处理，之后发送到logstash进行数据进一步处理。</p>
+<h3 id="logstash"><a href="#logstash" class="headerlink" title="logstash"></a>logstash</h3><p>  数据收集与处理工具。用于接收来自filebeat的数据，进行数据格式化，然后发送到elasticsearch。由于logstash是运行在jvm上，所以相比filebeat，会消耗更多资源。</p>
+<h3 id="elasticsearch"><a href="#elasticsearch" class="headerlink" title="elasticsearch"></a>elasticsearch</h3><p>  数据持久化与搜索。负责接收来自logstash的数据，然后保存。</p>
+<h3 id="kibana"><a href="#kibana" class="headerlink" title="kibana"></a>kibana</h3><p>  数据统计可视化工具。将elasticsearch中的数据，通过图表等进行展示。</p>
+<h2 id="docker-log"><a href="#docker-log" class="headerlink" title="docker log"></a>docker log</h2><p>  docker的标准日志输出是stdout和stderr，例如nginx的配置中，配置<code>access_log /dev/stdout;</code>和<code>error_log /dev/stderr;</code>。这样就可以通过docker容器采集到nginx的日志输出。<br>  docker启动可以指定不同的driver，其中默认的是json-file，使用json-file，可以使用<code>docker logs $containerName</code>来查看docker容器的日志，另外日志信息会存放到/var/lib/docker/containers/$containerId/$containerId-json.log下（此目录的生命周期跟随容器的生命周期），因此可以通过采集<code>/var/lib/docker/containers/*/*.log</code>来采集docker容器的信息。<br>  关于docker log driver，详见：<a href="https://docs.docker.com/engine/extend/plugins_logging/#create-a-logging-plugin" target="_blank" rel="noopener">https://docs.docker.com/engine/extend/plugins_logging/#create-a-logging-plugin</a></p>
+<h2 id="filebeat-1"><a href="#filebeat-1" class="headerlink" title="filebeat"></a>filebeat</h2><h3 id="docker-compose"><a href="#docker-compose" class="headerlink" title="docker-compose"></a>docker-compose</h3><p>  挂载docker的log目录到filebeat的容器下，另外还需要挂载一个目录到<code>/data</code>，用于保存采集日志文件的位置信息，默认路径是<code>/data/registry</code>。<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">### docker-compose</span><br><span class="line">### filebeat #############################</span><br><span class="line">filebeat:</span><br><span class="line">  build:</span><br><span class="line">    context: ./filebeat</span><br><span class="line">  volumes:</span><br><span class="line">    - $&#123;FILE_BEAT_REGISTRY_FILE&#125;:/data</span><br><span class="line">    - /var/lib/docker/containers:/var/lib/docker/containers</span><br></pre></td></tr></table></figure></p>
+<h3 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h3><p>  关于filebeat的配置，详见：<a href="https://www.elastic.co/guide/en/beats/filebeat/5.0/configuration-filebeat-options.html" target="_blank" rel="noopener">https://www.elastic.co/guide/en/beats/filebeat/5.0/configuration-filebeat-options.html</a></p>
+<h4 id="prospectors"><a href="#prospectors" class="headerlink" title="prospectors"></a>prospectors</h4><p>  配置需要采集的数据的来源，如log、stdin<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">filebeat.prospectors:</span><br><span class="line">- input_type: log</span><br><span class="line">  document_type: filebeat-docker-logs</span><br><span class="line">  paths:</span><br><span class="line">    - &quot;/var/lib/docker/containers/*/*.log&quot;</span><br><span class="line">  json.keys_under_root: true # 因为docker使用的log driver是json-file，因此采集到的日志格式是json格式，设置为true之后，filebeat会将日志进行json_decode处理</span><br><span class="line">  tail_files: true</span><br><span class="line">  registry_file: /var/lib/filebeat/registry</span><br></pre></td></tr></table></figure></p>
+<h4 id="processors"><a href="#processors" class="headerlink" title="processors"></a>processors</h4><p>  filebeat采集数据后的处理配置，可以将采集到的数据进行格式化，去除不需要的字段。<br>  在<code>/var/lib/docker/containers</code>采集到的是当前宿主机所有container的日志，这时候会有一个坑，假如filebeat是以docker container来运行的话，那么filebeat会采集到自己的container的日志。所以在processors中进行配置，过滤掉不需要的container日志。</p>
+<h5 id="为docker-log日志文件加上标记"><a href="#为docker-log日志文件加上标记" class="headerlink" title="为docker-log日志文件加上标记"></a>为docker-log日志文件加上标记</h5><p>  通过查看<code>/var/lib/docker/containers</code>发现，日志文件的命名方式是使用containerId来命名的，因此无法区分日志的容器所对应的镜像，而且日志格式如下：<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># nginx日志</span><br><span class="line">&#123;&quot;log&quot;:&quot;172.21.0.6 - - [24/Feb/2018:02:03:20 +0000] \&quot;GET /api/archive/recent HTTP/1.1\&quot; 200 411 \&quot;-\&quot; \&quot;-\&quot;\n&quot;,&quot;stream&quot;:&quot;stdout&quot;,&quot;time&quot;:&quot;2018-02-24T02:03:20.807279361Z&quot;&#125;</span><br><span class="line">&#123;&quot;log&quot;:&quot;172.21.0.6 - - [24/Feb/2018:02:03:20 +0000] \&quot;GET /api/archive HTTP/1.1\&quot; 200 4575 \&quot;-\&quot; \&quot;-\&quot;\n&quot;,&quot;stream&quot;:&quot;stdout&quot;,&quot;time&quot;:&quot;2018-02-24T02:03:20.816431883Z&quot;&#125;</span><br></pre></td></tr></table></figure></p>
+<p>  日志内容也没有可以区分镜像相关的信息，因此需要在日志内容中加上可以进行区分的信息，可以通过设置logging，增加labels信息。<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># docker-compose</span><br><span class="line">nginx:</span><br><span class="line">build: ./nginx</span><br><span class="line">labels:</span><br><span class="line">  service: platform</span><br><span class="line">logging:</span><br><span class="line">  driver: json-file</span><br><span class="line">  options:</span><br><span class="line">    labels: &quot;service&quot;</span><br></pre></td></tr></table></figure></p>
+<p>  <code>labels</code>字段表示给容器打上label信息，如上则给容器打上了一个service的labels，其值为platform<br>  <code>logging.options.labels</code>配置后可以在container的label信息输出到日志信息中。<br>  设置完成后通过使用<code>docker inspect $containerName</code>可以看到以下信息表示labels设置成功<br>  <img src="http://res2.yipzale.me/QQ20180224-135142.png" alt=""><br>  然后看容器产生的日志就会发现新增加的labels信息<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;log&quot;:&quot;172.21.0.6 - - [24/Feb/2018:02:03:20 +0000] \&quot;GET /api/archive/recent HTTP/1.1\&quot; 200 411 \&quot;-\&quot; \&quot;-\&quot;\n&quot;,&quot;stream&quot;:&quot;stdout&quot;,&quot;attrs&quot;:&#123;&quot;service&quot;:&quot;platform&quot;&#125;,&quot;time&quot;:&quot;2018-02-24T02:03:20.807279361Z&quot;&#125;</span><br><span class="line">&#123;&quot;log&quot;:&quot;172.21.0.6 - - [24/Feb/2018:02:03:20 +0000] \&quot;GET /api/archive HTTP/1.1\&quot; 200 4575 \&quot;-\&quot; \&quot;-\&quot;\n&quot;,&quot;stream&quot;:&quot;stdout&quot;,&quot;attrs&quot;:&#123;&quot;service&quot;:&quot;platform&quot;&#125;,&quot;time&quot;:&quot;2018-02-24T02:03:20.816431883Z&quot;&#125;</span><br></pre></td></tr></table></figure></p>
+<h5 id="过滤日志，提取需要的字段"><a href="#过滤日志，提取需要的字段" class="headerlink" title="过滤日志，提取需要的字段"></a>过滤日志，提取需要的字段</h5><p>  配置如下<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">processors:</span><br><span class="line">- drop_event:</span><br><span class="line">    when:</span><br><span class="line">      not:</span><br><span class="line">          equals:</span><br><span class="line">            attrs.service: &quot;platform&quot;</span><br><span class="line">- drop_fields:</span><br><span class="line">    fields: [&quot;input_type&quot;, &quot;offset&quot;, &quot;source&quot;, &quot;stream&quot;, &quot;beat&quot;]</span><br></pre></td></tr></table></figure></p>
+<p>  由于filebeat.yml中设置了json.keys_under_root: true，所以filebeat会自动对docker container的日志文件内容进行格式化。使用drop_event将attrs.service不等于platform的事件过滤，然后删除不需要的字段input_type、offset等信息。  </p>
+<p>  配置完成之后，filebeat会给logstash发送一下格式的数据<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  &quot;@timestamp&quot;: &quot;2018-02-24T06:00:03.309Z&quot;,</span><br><span class="line">  &quot;attrs&quot;: &#123;</span><br><span class="line">    &quot;service&quot;: &quot;platform&quot;</span><br><span class="line">  &#125;,</span><br><span class="line">  &quot;log&quot;: &quot;172.21.0.6 - - [24/Feb/2018:05:59:54 +0000] \&quot;GET /api/article/collect-docker-container-log/content HTTP/1.1\&quot; 200 6787 \&quot;-\&quot; \&quot;-\&quot;\n&quot;,</span><br><span class="line">  &quot;time&quot;: &quot;2018-02-24T05:59:54.973844296Z&quot;,</span><br><span class="line">  &quot;type&quot;: &quot;filebeat-docker-logs&quot;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="output"><a href="#output" class="headerlink" title="output"></a>output</h4><p>  配置filebeat的输出，可以配置不同的输出，例如stdout、输出到logstash、或者直接输出到elasticsearch。<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">output:</span><br><span class="line">### Logstash as output</span><br><span class="line">logstash:</span><br><span class="line">  hosts: [&quot;logstash:5044&quot;]</span><br></pre></td></tr></table></figure></p>
+<h3 id="logstash-1"><a href="#logstash-1" class="headerlink" title="logstash"></a>logstash</h3><h4 id="docker-compose-1"><a href="#docker-compose-1" class="headerlink" title="docker-compose"></a>docker-compose</h4><p>  比较简单，没有什么特别，确保开启一个端口用于接收数据即可，端口默认是5044。另外需要将配置文件挂载到<code>/etc/logstash/conf.d</code>下<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">#docker-compose</span><br><span class="line">logstash:</span><br><span class="line">build:</span><br><span class="line">  context: ./logstash</span><br><span class="line">ports:</span><br><span class="line">   - &quot;5044:5044&quot;</span><br></pre></td></tr></table></figure></p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">#Dockerfile</span><br><span class="line">FROM logstash:5.6</span><br><span class="line"></span><br><span class="line">ADD conf.d/*.conf /etc/logstash/conf.d</span><br><span class="line">CMD logstash -f /etc/logstash/conf.d/</span><br></pre></td></tr></table></figure>
+<h4 id="配置-1"><a href="#配置-1" class="headerlink" title="配置"></a>配置</h4><p>  详见：<a href="https://www.elastic.co/guide/en/logstash/current/configuration.html" target="_blank" rel="noopener">https://www.elastic.co/guide/en/logstash/current/configuration.html</a><br>  由于经过filebeat的处理之后的格式基本没有什么需要处理的了，所以logstash只需要将接收到的数据，转发到elasticsearch中即可。<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"># 配置输入，接收来自filebeat的数据</span><br><span class="line">input &#123;</span><br><span class="line">  beats &#123;</span><br><span class="line">    port =&gt; 5044</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"># 配置输出，输出到elasticsearch中</span><br><span class="line">output &#123;</span><br><span class="line">  elasticsearch &#123;</span><br><span class="line">    hosts =&gt; &quot;elasticsearch:9200&quot;</span><br><span class="line">    index =&gt; &quot;logstash-%&#123;type&#125;&quot;</span><br><span class="line">    template_overwrite =&gt; true</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="elasticsearch和kibana"><a href="#elasticsearch和kibana" class="headerlink" title="elasticsearch和kibana"></a>elasticsearch和kibana</h3><p>  两者的详细配置请见：<br>  <a href="https://www.elastic.co/guide/cn/elasticsearch/guide/current/getting-started.html" target="_blank" rel="noopener">https://www.elastic.co/guide/cn/elasticsearch/guide/current/getting-started.html</a><br>  <a href="https://www.elastic.co/guide/en/kibana/current/setup.html" target="_blank" rel="noopener">https://www.elastic.co/guide/en/kibana/current/setup.html</a><br>  docker-compose比较简单，只是挂载数据目录即可<br>  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">elasticsearch:</span><br><span class="line">  image: elasticsearch</span><br><span class="line">  user: elasticsearch # 用elasticsearch作为运行的用户，否则会有错误提示信息，无法使用root作为运行用户</span><br><span class="line">  volumes:</span><br><span class="line">     - $&#123;ELASTIC_DATA&#125;:/usr/share/elasticsearch/data # 挂载数据保存的目录</span><br><span class="line">  ports:</span><br><span class="line">     - &quot;9200:9200&quot;</span><br></pre></td></tr></table></figure></p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">kibana:</span><br><span class="line">  image: kibana</span><br><span class="line">  ports:</span><br><span class="line">    - 5601:5601</span><br><span class="line">  links:</span><br><span class="line">    - elasticsearch:$&#123;ELASTIC_HOST&#125;</span><br><span class="line">  environment:</span><br><span class="line">    - ELASTICSEARCH_URL=http://$&#123;ELASTIC_HOST&#125;:9200 # 设置elasticsearch的访问url</span><br></pre></td></tr></table></figure>
+<p>  以上配置完成之后，在浏览器中分别输入以下地址，检查是否配置成功。<br>  <a href="http://localhost:9200/_cat/indices?v，看到如下" target="_blank" rel="noopener">http://localhost:9200/_cat/indices?v，看到如下</a><br>  <img src="http://res2.yipzale.me/QQ20180224-135142.png" alt=""></p>
+<p>  <a href="http://localhost:5601，进入kibana设置界面" target="_blank" rel="noopener">http://localhost:5601，进入kibana设置界面</a><br>  <img src="http://res2.yipzale.me/QQ20180224-213113.png" alt=""></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/02/07/browser-timing.html" rel="next" title="Chrome浏览器Timing中的信息">
+                <i class="fa fa-chevron-left"></i> Chrome浏览器Timing中的信息
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/04/19/elasticsearch-basic-concepts.html" rel="prev" title="Elasticsearch基础概念">
+                Elasticsearch基础概念 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">yipzale</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">9</span>
+                    <span class="site-state-item-name">posts</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#工具"><span class="nav-number">1.</span> <span class="nav-text">工具</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#filebeat"><span class="nav-number">1.1.</span> <span class="nav-text">filebeat</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#logstash"><span class="nav-number">1.2.</span> <span class="nav-text">logstash</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#elasticsearch"><span class="nav-number">1.3.</span> <span class="nav-text">elasticsearch</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#kibana"><span class="nav-number">1.4.</span> <span class="nav-text">kibana</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#docker-log"><span class="nav-number">2.</span> <span class="nav-text">docker log</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#filebeat-1"><span class="nav-number">3.</span> <span class="nav-text">filebeat</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#docker-compose"><span class="nav-number">3.1.</span> <span class="nav-text">docker-compose</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配置"><span class="nav-number">3.2.</span> <span class="nav-text">配置</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#prospectors"><span class="nav-number">3.2.1.</span> <span class="nav-text">prospectors</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#processors"><span class="nav-number">3.2.2.</span> <span class="nav-text">processors</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#为docker-log日志文件加上标记"><span class="nav-number">3.2.2.1.</span> <span class="nav-text">为docker-log日志文件加上标记</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#过滤日志，提取需要的字段"><span class="nav-number">3.2.2.2.</span> <span class="nav-text">过滤日志，提取需要的字段</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#output"><span class="nav-number">3.2.3.</span> <span class="nav-text">output</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#logstash-1"><span class="nav-number">3.3.</span> <span class="nav-text">logstash</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#docker-compose-1"><span class="nav-number">3.3.1.</span> <span class="nav-text">docker-compose</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#配置-1"><span class="nav-number">3.3.2.</span> <span class="nav-text">配置</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#elasticsearch和kibana"><span class="nav-number">3.4.</span> <span class="nav-text">elasticsearch和kibana</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">yipzale</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

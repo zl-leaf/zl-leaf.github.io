@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="mysql有很多日志文件，这些日志文件用于一些关键性的功能，例如主从同步的实现需要binglog和relaylog，redolog帮助mysql解决了大量IO问题以及事务未提交时候服务器异常导致数据丢失的问题，undolog用于事务回滚。学习mysql的重要机制的时候需要了解当中诸如日志文件等细节。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql log日志">
+<meta property="og:url" content="http://yipzale.me/2018/07/03/mysql-log.html">
+<meta property="og:site_name" content="yipzale.me">
+<meta property="og:description" content="mysql有很多日志文件，这些日志文件用于一些关键性的功能，例如主从同步的实现需要binglog和relaylog，redolog帮助mysql解决了大量IO问题以及事务未提交时候服务器异常导致数据丢失的问题，undolog用于事务回滚。学习mysql的重要机制的时候需要了解当中诸如日志文件等细节。">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2018-12-20T16:40:37.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="mysql log日志">
+<meta name="twitter:description" content="mysql有很多日志文件，这些日志文件用于一些关键性的功能，例如主从同步的实现需要binglog和relaylog，redolog帮助mysql解决了大量IO问题以及事务未提交时候服务器异常导致数据丢失的问题，undolog用于事务回滚。学习mysql的重要机制的时候需要了解当中诸如日志文件等细节。">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yipzale.me/2018/07/03/mysql-log.html">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>mysql log日志 | yipzale.me</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">yipzale.me</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="Toggle navigation bar">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>Home</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>Archives</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2018/07/03/mysql-log.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="yipzale">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="yipzale.me">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">mysql log日志
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2018-07-03 03:12:34" itemprop="dateCreated datePublished" datetime="2018-07-03T03:12:34+08:00">2018-07-03</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Edited on</span>
+                
+                <time title="Modified: 2018-12-21 00:40:37" itemprop="dateModified" datetime="2018-12-21T00:40:37+08:00">2018-12-21</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>mysql有很多日志文件，这些日志文件用于一些关键性的功能，例如主从同步的实现需要binglog和relaylog，redolog帮助mysql解决了大量IO问题以及事务未提交时候服务器异常导致数据丢失的问题，undolog用于事务回滚。学习mysql的重要机制的时候需要了解当中诸如日志文件等细节。</p>
+<a id="more"></a>
+<hr>
+<h1 id="数据库log文件"><a href="#数据库log文件" class="headerlink" title="数据库log文件"></a>数据库log文件</h1><h2 id="bin-log与relay-log"><a href="#bin-log与relay-log" class="headerlink" title="bin log与relay log"></a>bin log与relay log</h2><h3 id="bin-log"><a href="#bin-log" class="headerlink" title="bin log"></a>bin log</h3><p>记录数据库上所有变更，以二进制的形式保存在磁盘中。语句以“事件”的形式保存，它描述数据更改。主要用于查看数据库变更历史、数据库增量备份和恢复、数据库的主从同步。<br>每个事务提交之前，数据的变更会记录到bin log中（串行地写入），记录日志完成之后会通知存储引擎提交事务。</p>
+<h3 id="relay-log"><a href="#relay-log" class="headerlink" title="relay log"></a>relay log</h3><p>与bin log一样，是一系列包含数据库变更记录的文件，以及一个索引文件（记录当前使用的relay log 文件）。主库的bing log传到从库的relay log中，然后从库从relay log执行备份，实现主从同步。</p>
+<h3 id="主从同步"><a href="#主从同步" class="headerlink" title="主从同步"></a>主从同步</h3><p>salve打开一个IO线程，IO线程在master打开一个普通连接，开始binlog dump process。<br>Binlog dump process从master的二进制日志中读取事件，如果已经跟上master，它会睡眠并等待master产生新的事件。I/O线程将这些事件写入中继日志。中继日志通常会位于OS的缓存中，所以中继日志的开销很小。<br>SQL线程从中继日志读取事件，更新slave的数据，使其与master中的数据一致。</p>
+<h2 id="Redo-log"><a href="#Redo-log" class="headerlink" title="Redo log"></a>Redo log</h2><h3 id="buffer-pool"><a href="#buffer-pool" class="headerlink" title="buffer pool"></a>buffer pool</h3><p>InnoDB有buffer pool（简称bp）。bp是数据库页面的缓存，对InnoDB的任何修改操作都会首先在bp的page上进行，然后这样的页面将被标记为dirty并被放到专门的flush list上，后续将由master thread或专门的刷脏线程阶段性的将这些页面写入磁盘（disk or ssd）。这样的好处是避免每次写操作都操作磁盘导致大量的随机IO，阶段性的刷脏可以将多次对页面的修改merge成一次IO操作，同时异步写入也降低了访问的时延。</p>
+<h3 id="Redo-log作用"><a href="#Redo-log作用" class="headerlink" title="Redo log作用"></a>Redo log作用</h3><p>如果在dirty page还未刷入磁盘时，server非正常关闭，这些修改操作将会丢失，如果写入操作正在进行，甚至会由于损坏数据文件导致数据库不可用。为了避免上述问题的发生，Innodb将所有对页面的修改操作写入一个专门的文件，并在数据库启动时从此文件进行恢复操作，这个文件就是redo log file。<br>这样的技术推迟了bp页面的刷新，从而提升了数据库的吞吐，有效的降低了访问时延。带来的问题是额外的写redo log操作的开销，以及数据库启动时恢复操作所需的时间。<br>Redo log和Binlog的区别</p>
+<ul>
+<li>Redo log是在INNODB存储引擎层产生的，而Bin log则是在Mysql层产生的（Mysql下任何存储引擎都可以生成Bin log）。</li>
+<li>两种日志的写入时间不一样。Redo log是在事务中（事务没提交）会不停写入，而Bin log则是在事务提交之后才被写入。</li>
+</ul>
+<h3 id="Undo-Log"><a href="#Undo-Log" class="headerlink" title="Undo Log"></a>Undo Log</h3><p>Undo log是一种日志，日志中记录对于数据库的反向操作。<br>由于事务的原子性，事务中的所有操作，要么全部完成，要么不做任何操作，不能只做部分操作。如果在执行的过程中发了错误，要回滚(Rollback)。回滚的时候就需要借助Undo log。</p>
+<p>转载：</p>
+<ul>
+<li><a href="http://www.cnblogs.com/liuhao/p/3714012.html" target="_blank" rel="noopener">http://www.cnblogs.com/liuhao/p/3714012.html</a></li>
+<li><a href="https://blog.csdn.net/bigtree_3721/article/details/51010463" target="_blank" rel="noopener">https://blog.csdn.net/bigtree_3721/article/details/51010463</a></li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/06/07/login-studing.html" rel="next" title="授权认证相关学习资料">
+                <i class="fa fa-chevron-left"></i> 授权认证相关学习资料
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/07/19/ts-and-nts.html" rel="prev" title="PHP的线程安全与非线程安全">
+                PHP的线程安全与非线程安全 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">yipzale</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">9</span>
+                    <span class="site-state-item-name">posts</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#数据库log文件"><span class="nav-number">1.</span> <span class="nav-text">数据库log文件</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#bin-log与relay-log"><span class="nav-number">1.1.</span> <span class="nav-text">bin log与relay log</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#bin-log"><span class="nav-number">1.1.1.</span> <span class="nav-text">bin log</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#relay-log"><span class="nav-number">1.1.2.</span> <span class="nav-text">relay log</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#主从同步"><span class="nav-number">1.1.3.</span> <span class="nav-text">主从同步</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Redo-log"><span class="nav-number">1.2.</span> <span class="nav-text">Redo log</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#buffer-pool"><span class="nav-number">1.2.1.</span> <span class="nav-text">buffer pool</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Redo-log作用"><span class="nav-number">1.2.2.</span> <span class="nav-text">Redo log作用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Undo-Log"><span class="nav-number">1.2.3.</span> <span class="nav-text">Undo Log</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">yipzale</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="关于PHP的线程安全和非线程安全，一直以来只知道IIS下用线程安全，其他情况使用非线程安全即可，但其实这样的理解是错误的，因此通过此文章整理一下PHP线程安全和非线程安全当中所涉及到的知识点，建立完整的知识树。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="PHP的线程安全与非线程安全">
+<meta property="og:url" content="http://yipzale.me/2018/07/19/ts-and-nts.html">
+<meta property="og:site_name" content="yipzale.me">
+<meta property="og:description" content="关于PHP的线程安全和非线程安全，一直以来只知道IIS下用线程安全，其他情况使用非线程安全即可，但其实这样的理解是错误的，因此通过此文章整理一下PHP线程安全和非线程安全当中所涉及到的知识点，建立完整的知识树。">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="http://res2.yipzale.me/thread-and-process.jpg">
+<meta property="og:updated_time" content="2018-12-20T16:40:53.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="PHP的线程安全与非线程安全">
+<meta name="twitter:description" content="关于PHP的线程安全和非线程安全，一直以来只知道IIS下用线程安全，其他情况使用非线程安全即可，但其实这样的理解是错误的，因此通过此文章整理一下PHP线程安全和非线程安全当中所涉及到的知识点，建立完整的知识树。">
+<meta name="twitter:image" content="http://res2.yipzale.me/thread-and-process.jpg">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yipzale.me/2018/07/19/ts-and-nts.html">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>PHP的线程安全与非线程安全 | yipzale.me</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">yipzale.me</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="Toggle navigation bar">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>Home</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>Archives</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2018/07/19/ts-and-nts.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="yipzale">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="yipzale.me">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">PHP的线程安全与非线程安全
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2018-07-19 03:43:49" itemprop="dateCreated datePublished" datetime="2018-07-19T03:43:49+08:00">2018-07-19</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Edited on</span>
+                
+                <time title="Modified: 2018-12-21 00:40:53" itemprop="dateModified" datetime="2018-12-21T00:40:53+08:00">2018-12-21</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>关于PHP的线程安全和非线程安全，一直以来只知道IIS下用线程安全，其他情况使用非线程安全即可，但其实这样的理解是错误的，因此通过此文章整理一下PHP线程安全和非线程安全当中所涉及到的知识点，建立完整的知识树。</p>
+<a id="more"></a>
+<hr>
+<h1 id="PHP的线程安全与非线程安全"><a href="#PHP的线程安全与非线程安全" class="headerlink" title="PHP的线程安全与非线程安全"></a>PHP的线程安全与非线程安全</h1><h2 id="背景-线程安全-TS-与非线程安全-NTS"><a href="#背景-线程安全-TS-与非线程安全-NTS" class="headerlink" title="背景-线程安全(TS)与非线程安全(NTS)"></a>背景-线程安全(TS)与非线程安全(NTS)</h2><p>以下为<a href="http://www.admin10000.com/document/55.html" target="_blank" rel="noopener">PHP的线程安全与非线程安全版本的区别</a>简要描述</p>
+<blockquote>
+<p>由于Windows使用的是线程的工作模式，使用CGI模式运行PHP的话会非常慢，因此一般在IIS下会将PHP配置成ISAPI方式运行。但是由于常用的PHP扩展都是以多进程的思想来设计的，这些扩展在ISAPI的方式运行时候出错就会搞垮IIS，因此在ISAPI方式下需要使用TS的PHP，而使用CGI方式运行的使用NTS的PHP即可。<br>为了兼顾IIS下PHP的效率和安全，微软给出了FastCGI的解决方案，并且作为主要方案。</p>
+</blockquote>
+<p>以上是TS版本和NTS版本的区别以及使用场景，由此引入两个问题：</p>
+<ul>
+<li>为什么ISAPI多线程下需要线程安全？</li>
+<li>TS版本PHP安全在哪里？</li>
+</ul>
+<h2 id="为什么ISAPI多线程下需要线程安全？"><a href="#为什么ISAPI多线程下需要线程安全？" class="headerlink" title="为什么ISAPI多线程下需要线程安全？"></a>为什么ISAPI多线程下需要线程安全？</h2><h3 id="简介"><a href="#简介" class="headerlink" title="简介"></a>简介</h3><p>之所以在ISAPI方式中需要使用TS版本的PHP，是因为以多进程思想开发的扩展在ISAPI中如果出错会导致IIS崩溃，那为什么多进程思想开发的扩展运行出错会导致IIS崩溃呢？下面会对此进行说明。</p>
+<h3 id="IIS和ISAPI"><a href="#IIS和ISAPI" class="headerlink" title="IIS和ISAPI"></a>IIS和ISAPI</h3><p>IIS是Windows平台的一个互联网基本服务(<a href="https://baike.baidu.com/item/iis/99720?fr=aladdin" target="_blank" rel="noopener">百度-IIS</a>)，而ISAPI是扩展的API，扩展IIS功能，将用户请求转发给程序进行处理并且返回(<a href="https://baike.baidu.com/item/ISAPI/4445942" target="_blank" rel="noopener">百度-ISAPI</a>)。<br>ISAPI服务扩展是一个可以被IIS加载和调用的DLL，因此和服务器是共用同一地址空间，简单来说就是属于同一个进程。而CGI模式不一样，CGI是属于单独的一个进程。</p>
+<h3 id="进程与线程"><a href="#进程与线程" class="headerlink" title="进程与线程"></a>进程与线程</h3><h4 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h4><p>程序代码执行的实体、资源拥有者，包含了程序指令、当前状态和相关系统资源。进程拥有资源的所有权，这些资源包括内存、I/O通道、I/O设备和文件等。</p>
+<h4 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h4><p>程序实际的执行者。参与执行和调度，线程有一个唯一对应的进程。</p>
+<h4 id="进程和线程的区别与关系"><a href="#进程和线程的区别与关系" class="headerlink" title="进程和线程的区别与关系"></a>进程和线程的区别与关系</h4><p>如图，在单线程进程模型中，进程的表示包括进程控制块和用户地址空间，以及在进程执行中管理调用/返回行为的用户栈和内核栈。而多线程进程模型中，进程仍然只有一个与之关联的进程控制块和用户地址空间，但是每一个线程都有其独立的栈和线程控制块。<br>进程中所有线程是共享进程的状态和资源，进程创建时候申请的内存地址空间，之后，进程中的线程都驻留在这一块地址空间中，可以互相访问到相同的数据。<br><img src="http://res2.yipzale.me/thread-and-process.jpg" alt="线程进程模型"></p>
+<h3 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h3><p>PHP中的静态变量等资源，在多线程方式下是属于共享资源，即不同线程可以对同一变量进行访问和修改。例如线程A初始化了一个变量$a=1，然后线程B可以修改变量$a=2，这样线程A在读取变量$a的时候已经是2了，此情况下可能会导致线程A出错。因此在ISAPI下需要使用TS版本的PHP。</p>
+<h2 id="TS版本PHP安全在哪里？"><a href="#TS版本PHP安全在哪里？" class="headerlink" title="TS版本PHP安全在哪里？"></a>TS版本PHP安全在哪里？</h2><p>为了解决线程的安全问题，引入了TSRM层，主要是处理共享变量的线程间访问问题。详情见<a href="http://www.php-internals.com/book/?p=chapt08/08-03-zend-thread-safe-in-php" target="_blank" rel="noopener">PHP中线程安全</a></p>
+<h1 id="扩展-进程与线程的产生"><a href="#扩展-进程与线程的产生" class="headerlink" title="扩展-进程与线程的产生"></a>扩展-进程与线程的产生</h1><p>参考自 <a href="http://www.cnblogs.com/dolphin0520/p/3910667.html" target="_blank" rel="noopener">Java并发编程：进程和线程之由来</a><br>进程是最先被设计出的，由于进程的出现，操作系统可以“同时”执行多个程序，操作系统也是以进程作为执行和调度的单位的。进程之间是互不干扰的，如果进程之间需要互相通信，则需要操作系统的介入，例如linux中的unixsocket。<br>随着后来程序的复杂化，一个程序中需要包含很多子任务，例如收集数据和显示图表。大部分子任务是可以并行执行的，如果依然以进程作为执行调度单位的话，那么子任务只能一个接一个地执行，即使在多核中也无法实现并行。后来设计出了线程，进程拥有资源，而线程负责执行和调度，如此进程就可以并发地执行子任务了。</p>
+<hr>
+<p><strong>参考</strong>：</p>
+<ul>
+<li><a href="http://www.admin10000.com/document/55.html" target="_blank" rel="noopener">PHP的线程安全与非线程安全版本的区别</a></li>
+<li><a href="http://www.php-internals.com/book/?p=chapt08/08-03-zend-thread-safe-in-php" target="_blank" rel="noopener">PHP中线程安全</a></li>
+<li><a href="http://www.cnblogs.com/dolphin0520/p/3910667.html" target="_blank" rel="noopener">Java并发编程：进程和线程之由来</a></li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/07/03/mysql-log.html" rel="next" title="mysql log日志">
+                <i class="fa fa-chevron-left"></i> mysql log日志
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/10/21/mysql-deadlock-case.html" rel="prev" title="循环update导致的mysql deadlock分析">
+                循环update导致的mysql deadlock分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">yipzale</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">9</span>
+                    <span class="site-state-item-name">posts</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#PHP的线程安全与非线程安全"><span class="nav-number">1.</span> <span class="nav-text">PHP的线程安全与非线程安全</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景-线程安全-TS-与非线程安全-NTS"><span class="nav-number">1.1.</span> <span class="nav-text">背景-线程安全(TS)与非线程安全(NTS)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#为什么ISAPI多线程下需要线程安全？"><span class="nav-number">1.2.</span> <span class="nav-text">为什么ISAPI多线程下需要线程安全？</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#简介"><span class="nav-number">1.2.1.</span> <span class="nav-text">简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#IIS和ISAPI"><span class="nav-number">1.2.2.</span> <span class="nav-text">IIS和ISAPI</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#进程与线程"><span class="nav-number">1.2.3.</span> <span class="nav-text">进程与线程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#进程"><span class="nav-number">1.2.3.1.</span> <span class="nav-text">进程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#线程"><span class="nav-number">1.2.3.2.</span> <span class="nav-text">线程</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#进程和线程的区别与关系"><span class="nav-number">1.2.3.3.</span> <span class="nav-text">进程和线程的区别与关系</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#结论"><span class="nav-number">1.2.4.</span> <span class="nav-text">结论</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TS版本PHP安全在哪里？"><span class="nav-number">1.3.</span> <span class="nav-text">TS版本PHP安全在哪里？</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#扩展-进程与线程的产生"><span class="nav-number">2.</span> <span class="nav-text">扩展-进程与线程的产生</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">yipzale</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="目前大多数web应用都是读多写少的环境，所以基本都是使用读写分离，即使用主库负责接收写入的请求，从库则负责读取的请求。使用多台数据库机器作为从库，来应对大量的读请求，进而提高web应用的迸发量。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="部署从库">
+<meta property="og:url" content="http://yipzale.me/2018/02/07/mysql-slave.html">
+<meta property="og:site_name" content="yipzale.me">
+<meta property="og:description" content="目前大多数web应用都是读多写少的环境，所以基本都是使用读写分离，即使用主库负责接收写入的请求，从库则负责读取的请求。使用多台数据库机器作为从库，来应对大量的读请求，进而提高web应用的迸发量。">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="http://res2.yipzale.me/1.png">
+<meta property="og:image" content="http://res2.yipzale.me/QQ20180224-094323.png">
+<meta property="og:updated_time" content="2018-12-20T16:36:45.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="部署从库">
+<meta name="twitter:description" content="目前大多数web应用都是读多写少的环境，所以基本都是使用读写分离，即使用主库负责接收写入的请求，从库则负责读取的请求。使用多台数据库机器作为从库，来应对大量的读请求，进而提高web应用的迸发量。">
+<meta name="twitter:image" content="http://res2.yipzale.me/1.png">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yipzale.me/2018/02/07/mysql-slave.html">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>部署从库 | yipzale.me</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">yipzale.me</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="Toggle navigation bar">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>Home</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>Archives</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2018/02/07/mysql-slave.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="yipzale">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="yipzale.me">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">部署从库
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2018-02-07 00:00:00" itemprop="dateCreated datePublished" datetime="2018-02-07T00:00:00+08:00">2018-02-07</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">Edited on</span>
+                
+                <time title="Modified: 2018-12-21 00:36:45" itemprop="dateModified" datetime="2018-12-21T00:36:45+08:00">2018-12-21</time>
+              
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>目前大多数web应用都是读多写少的环境，所以基本都是使用读写分离，即使用主库负责接收写入的请求，从库则负责读取的请求。使用多台数据库机器作为从库，来应对大量的读请求，进而提高web应用的迸发量。</p>
+<a id="more"></a>
+<hr>
+<h2 id="Master"><a href="#Master" class="headerlink" title="Master"></a>Master</h2><h3 id="创建帐号用于主从同步"><a href="#创建帐号用于主从同步" class="headerlink" title="创建帐号用于主从同步"></a>创建帐号用于主从同步</h3><p>  进入主库，执行以下命令假设创建账号为mysql-master，密码为mysql-master<br>  <code>grant replication slave on *.* to &#39;mysql-master&#39;@&#39;localhost&#39; identified by &#39;mysql-master&#39;;</code><br>  <code>flush privileges;</code> 刷新权限</p>
+<h3 id="导出数据"><a href="#导出数据" class="headerlink" title="导出数据"></a>导出数据</h3><p>  执行命令<code>mysqldump -uXXX -pXXXX --master-data --single-transaction -R --databases your_db_name &gt; /tmp/db.sql;</code>。这里有两个点，<code>--master-data</code>和<code>--single-transaction</code>。  </p>
+<ul>
+<li>加上<code>--master-data</code>之后，导出的sql文件的开头会多了一个语句是<code>CHANGE MASTER TO MASTER_LOG_FILE=&#39;mysql-bin.xxx&#39;, MASTER_LOG_POS=xxx;</code>，这里记录了执行数据库导出时候，主库的binlog文件以及其位置，用于后面的从库设置。PS：logfiel和logpos信息可以通过命令<code>show master status;</code><br><img src="http://res2.yipzale.me/1.png" alt=""></li>
+<li>加上<code>--single-transaction</code>之后，有类似于事物的效果，途中数据写入不会对导出的sql造成影响。</li>
+</ul>
+<h2 id="Slave"><a href="#Slave" class="headerlink" title="Slave"></a>Slave</h2><h3 id="从库设置"><a href="#从库设置" class="headerlink" title="从库设置"></a>从库设置</h3><p>  进入从库，执行命令<code>CHANGE MASTER TO MASTER_HOST=&#39;mysql-master&#39;,MASTER_USER=&#39;mysql-master&#39;,MASTER_PASSWORD=&#39;mysql-master&#39;;</code>貌似这个可以写在配置文件中，写本文的时候还没有查到。。。</p>
+<h3 id="同步主库数据"><a href="#同步主库数据" class="headerlink" title="同步主库数据"></a>同步主库数据</h3><p>  将之前从主库导出的数据导入到从库中。导入数据的时候会执行到<code>CHANGE MASTER TO MASTER_LOG_FILE=&#39;mysql-bin.xxx&#39;, MASTER_LOG_POS=xxx;</code>，表示从主库的某一个点开始执行同步。</p>
+<h3 id="启动主从同步"><a href="#启动主从同步" class="headerlink" title="启动主从同步"></a>启动主从同步</h3><p>  执行命令<code>start slave</code>，然后使用命令<code>show slave status \G</code>检查Slave_IO_Running 和 Slave_SQL_Running，两项都为yes即可，这样从库就会开始从主库导出数据的那个点往后继续同步数据了。<br>  <img src="http://res2.yipzale.me/QQ20180224-094323.png" alt=""></p>
+<h2 id="问题记录"><a href="#问题记录" class="headerlink" title="问题记录"></a>问题记录</h2><h3 id="Slave-failed-to-initialize-relay-log-info-structure-from-the-repository"><a href="#Slave-failed-to-initialize-relay-log-info-structure-from-the-repository" class="headerlink" title="Slave failed to initialize relay log info structure from the repository"></a>Slave failed to initialize relay log info structure from the repository</h3><h4 id="问题描述与修复"><a href="#问题描述与修复" class="headerlink" title="问题描述与修复"></a>问题描述与修复</h4><p>  使用的docker构建从库，当重新构建从库，执行<code>start slave</code>时候会提示此信息。此时可以执行以下命令修复</p>
+<ul>
+<li><code>stop slave</code></li>
+<li><code>reset slave</code></li>
+<li><code>CHANGE MASTER TO MASTER_LOG_FILE=&#39;mysql-bin.xxx&#39;, MASTER_LOG_POS=xxx;</code>，其中<code>MASTER_LOG_FILE</code>和<code>MASTER_LOG_POS</code>信息请看上面的“导出数据”</li>
+<li><code>start slave</code><br>PS：由于自建的博客，主库的<code>MASTER_LOG_FILE</code>和<code>MASTER_LOG_POS</code>变动不大，所以可以使用此方式，如果是线上运行的服务，不能采用如此粗暴的方式。</li>
+</ul>
+<h4 id="扩展信息"><a href="#扩展信息" class="headerlink" title="扩展信息"></a>扩展信息</h4><ul>
+<li><code>restart master</code>和<code>restart slave</code><ul>
+<li><code>restart master</code>重置master的binglog，从000001开始重新记录。此命令一般只用于主从设置最开始，设置master。</li>
+<li><code>restart slave</code>重置slave的relaylog，执行之后从库会从新生成relaylog，重新执行。</li>
+</ul>
+</li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/02/07/browser-timing.html" rel="prev" title="Chrome浏览器Timing中的信息">
+                Chrome浏览器Timing中的信息 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">yipzale</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">9</span>
+                    <span class="site-state-item-name">posts</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Master"><span class="nav-number">1.</span> <span class="nav-text">Master</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建帐号用于主从同步"><span class="nav-number">1.1.</span> <span class="nav-text">创建帐号用于主从同步</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#导出数据"><span class="nav-number">1.2.</span> <span class="nav-text">导出数据</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Slave"><span class="nav-number">2.</span> <span class="nav-text">Slave</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#从库设置"><span class="nav-number">2.1.</span> <span class="nav-text">从库设置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#同步主库数据"><span class="nav-number">2.2.</span> <span class="nav-text">同步主库数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#启动主从同步"><span class="nav-number">2.3.</span> <span class="nav-text">启动主从同步</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#问题记录"><span class="nav-number">3.</span> <span class="nav-text">问题记录</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Slave-failed-to-initialize-relay-log-info-structure-from-the-repository"><span class="nav-number">3.1.</span> <span class="nav-text">Slave failed to initialize relay log info structure from the repository</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#问题描述与修复"><span class="nav-number">3.1.1.</span> <span class="nav-text">问题描述与修复</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#扩展信息"><span class="nav-number">3.1.2.</span> <span class="nav-text">扩展信息</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">yipzale</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
