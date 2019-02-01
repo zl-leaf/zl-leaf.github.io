@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="翻译《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》中第六章中Unix的五种I/O模型的区别，以及POIX对于同步I/O与异步I/O的定义。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="I&#x2F;O模型">
+<meta property="og:url" content="http://yipzale.me/2019/02/01/io-model.html">
+<meta property="og:site_name" content="yipzale.me">
+<meta property="og:description" content="翻译《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》中第六章中Unix的五种I/O模型的区别，以及POIX对于同步I/O与异步I/O的定义。">
+<meta property="og:locale" content="default">
+<meta property="og:image" content="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig01.jpg">
+<meta property="og:image" content="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig02.jpg">
+<meta property="og:image" content="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig03.jpg">
+<meta property="og:image" content="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig04.jpg">
+<meta property="og:image" content="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig05.jpg">
+<meta property="og:image" content="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig06.jpg">
+<meta property="og:updated_time" content="2019-02-01T13:47:24.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="I&#x2F;O模型">
+<meta name="twitter:description" content="翻译《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》中第六章中Unix的五种I/O模型的区别，以及POIX对于同步I/O与异步I/O的定义。">
+<meta name="twitter:image" content="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig01.jpg">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yipzale.me/2019/02/01/io-model.html">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>I/O模型 | yipzale.me</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">yipzale.me</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="Toggle navigation bar">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>Home</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>Archives</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2019/02/01/io-model.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="yipzale">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="yipzale.me">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">I/O模型
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2019-02-01 21:44:07 / Modified: 21:47:24" itemprop="dateCreated datePublished" datetime="2019-02-01T21:44:07+08:00">2019-02-01</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>翻译《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》中第六章中Unix的五种I/O模型的区别，以及<code>POIX</code>对于同步I/O与异步I/O的定义。</p>
+<a id="more"></a>
+<hr>
+<p>Unix下5中I/O模型的基本区别：</p>
+<ul>
+<li>阻塞I/O（blocking I/O）</li>
+<li>非阻塞I/O（nonblocking I/O），例如<code>select</code>和<code>poll</code></li>
+<li>I/O多路复用（I/O multiplexing）</li>
+<li>信号驱动I/O（singal driven I/O）</li>
+<li>异步IO（asynchronous I/O），<code>POSIX</code>中定义的<code>aio_functions</code></li>
+</ul>
+<p>在输入操作的过程中，一般有两个阶段</p>
+<ul>
+<li>等待数据准备完毕</li>
+<li>将数据从内核（内存）复制到进程（内存）<br>socket上的输入操作，第一步一般是等待网络中的数据到达，当数据到达之后，会被复制到内核缓冲区。然后第二步就是将数据从内核缓冲区复制到应用缓冲区。</li>
+</ul>
+<h2 id="阻塞I-O模型"><a href="#阻塞I-O模型" class="headerlink" title="阻塞I/O模型"></a>阻塞I/O模型</h2><p>在I/O模型中，最普遍的就是阻塞I/O模型，默认情况下，所有sockets都是阻塞的。如下图<br><img src="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig01.jpg" alt="Figure 6.1. Blocking I/O model."><br>这个例子中，我们使用UDP而不是TCP，因为可以将“数据准备好可以被读取”简单地理解为数据是否已经接收到数据。如果是TCP，这会很复杂。<br>在例子中，我们继续用<code>recvfrom</code>作为系统调用，因为我们要区分应用和内核。不管<code>recvfrom</code>现的，调用的时候都会产生从用户态到内核态的切换，一段时间之后重新回到用户态继续执行。<br>在上图中，进程调用<code>recvfrom</code>直到数据接收完成并且复制到应用缓冲区，系统调用的返回结果或者抛出异常。最平常的错误就是系统调用被中断信号中断。进程从调用<code>recvfrom</code>这段时间都处于阻塞中，当<code>recvfrom</code>用进程开始操作数据。</p>
+<h2 id="非阻塞I-O模型"><a href="#非阻塞I-O模型" class="headerlink" title="非阻塞I/O模型"></a>非阻塞I/O模型</h2><p>当我们设置socket为非阻塞之后，当应用发起I/O请求的时候，如果数据还没有准备完毕，内核不会挂起进程，而是返回一个error。<br><img src="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig02.jpg" alt="Figure 6.2. Nonblocking I/O model."><br>最开始的三次<code>recvfrom</code>系统调用没有数据返回，所以内核马上返回了<code>EWOULDBLOCK</code>错误，第四次调用<code>recvfrom</code>，数据已经准备好，它被复制到应用缓冲区，然后<code>recvfrom</code>返回成功，之后应用可以开始处理数据。<br>当应用循环地对一个非阻塞的描述符调用recvfrom，被称为轮训（polling）。应用需要进行轮训，向内核请求检查一些操作是否已经完成，这会很浪费CPU时间，但是这种模型偶尔会出现在专用于一个功能的系统上。  </p>
+<h2 id="I-O多路复用模型"><a href="#I-O多路复用模型" class="headerlink" title="I/O多路复用模型"></a>I/O多路复用模型</h2><p>应用在调用<code>select</code>或<code>poll</code>这两个系统调用的时候被阻塞（被<code>select</code>或者<code>poll</code>阻塞），而不是被实际的I/O系统调用阻塞。<br><img src="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig03.jpg" alt="Figure 6.3. I/O multiplexing model."><br>上图是调用<code>select</code>的例子，在调用select的时候，应用被阻塞，直到数据可读。当<code>select</code>返回数据可读的时候，我们调用<code>recvfrom</code>将数据复制到应用的缓冲区中。<br>与阻塞I/O模型对比，看起来没有任何优势，反而会有缺陷，因为使用了<code>select</code>和<code>recvfrom</code>，总共两次系统调用，比阻塞I/O模型多了一次。但是<code>select</code>可以同时监听多个描述符等待数据。</p>
+<ul>
+<li>另外一个与I/O多路复用模型很相似的是通过多线程使用阻塞I/O模型。这种模型不通过<code>select</code>监听多个描述符，而是使用多个线程（每个文件描述符分配一个线程）去执行I/O操作，例如<code>recvfrom</code>。</li>
+</ul>
+<h2 id="信号驱动I-O模型"><a href="#信号驱动I-O模型" class="headerlink" title="信号驱动I/O模型"></a>信号驱动I/O模型</h2><p>我们也可以使用信号，让内核在数据准备好的时候，给应用发送<code>SIGIO</code>信号。这种方式称为信号驱动I/O模型，如下图所示<br><img src="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig04.jpg" alt="Figure 6.4. Signal-Driven I/O model."><br>首先需要设置socket启动信号驱动I/O功能，然后通过<code>sigaction</code>系统调用来设置信号处理方法。<code>sigaction</code>会马上返回结果，然后进程不会被阻塞，继续往下执行。当数据接收完毕，内核会产生一个<code>SIGIO</code>信号，触发信号处理方法，方法中可以通过<code>recvfrom</code>将数据复制到应用缓冲区，然后通知主循环去处理数据，也可以通知主循环，让其调用<code>recvfrom</code>。<br>这种模型的优点在于，当还没有接收到数据的时候，进程不会被阻塞。主循环可以继续执行，只需要等待信号处理方法的通知去处理数据或者读取数据。  </p>
+<h2 id="异步I-O模型"><a href="#异步I-O模型" class="headerlink" title="异步I/O模型"></a>异步I/O模型</h2><p>异步I/O由<a href="https://zh.wikipedia.org/wiki/%E5%8F%AF%E7%A7%BB%E6%A4%8D%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%8E%A5%E5%8F%A3" target="_blank" rel="noopener"><code>POSIX</code></a>定义（融合了各种标准中的实时方法），与其他实时方法相似，它们的工作方式都是通知内核开始I/O操作，然后在I/O操作完成的时候通知应用（包括将数据从内核缓冲区复制到应用缓冲区）。异步I/O模型与信号驱动I/O模型最主要的区别在于，在信号驱动I/O模型中，当数据准备完毕的时候，内核就会进行通知，而在异步I/O模型中，只有当I/O操作完成的时候（复制到应用缓冲区），内核才会通知。如下图所示<br><img src="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig05.jpg" alt="Figure 6.5. Asynchronous I/O model."><br>通过系统调用<code>aio_read</code>（<code>POSIX</code>中定义异步I/O方法都是以<code>aio_</code>或者<code>lio_</code>开头），参数包括描述符、缓冲区指针、缓冲区大小（这三个参数与<code>read</code>的参数一样）、文件偏移位置（与<code>lseek</code>一样），以及如何通知应用I/O操作完成。系统调用会马上返回结果，进程可以继续执行而不会被阻塞。</p>
+<h2 id="五种I-O模型的对比"><a href="#五种I-O模型的对比" class="headerlink" title="五种I/O模型的对比"></a>五种I/O模型的对比</h2><p>下图展示了五种I/O模型的区别，其中主要的区别在于第一步接收数据的时候。到了第二步的时候，前四种I/O模型都是一样的（调用<code>recvfrom</code>，进程阻塞直到数据从内核缓冲区复制到应用缓冲区）。异步I/O模型从第一步到第二步都与另外四种I/O模型不一样。<br><img src="https://learning.oreilly.com/library/view/the-sockets-networking/0131411551/graphics/06fig06.jpg" alt="Figure 6.6. Comparison of the five I/O models.">  </p>
+<h2 id="同步I-O与异步I-O对比"><a href="#同步I-O与异步I-O对比" class="headerlink" title="同步I/O与异步I/O对比"></a>同步I/O与异步I/O对比</h2><p><code>POSIX</code>定义如下：</p>
+<ul>
+<li>同步I/O操作，会让请求的进程阻塞，直到I/O操作完成。</li>
+<li>异步I/O操作不会造成进程的阻塞。</li>
+</ul>
+<p>根据这两个定义，前四种模型（阻塞I/O、非阻塞I/O、I/O多路复用和信号驱动I/O）都属于同步I/O，因为在实际I/O操作（例如<code>recvfrom</code>）的时候会造成进程的阻塞，只有异步I/O模型符合异步I/O的定义。</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/10/21/mysql-deadlock-case.html" rel="next" title="循环update导致的mysql deadlock分析">
+                <i class="fa fa-chevron-left"></i> 循环update导致的mysql deadlock分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">yipzale</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">10</span>
+                    <span class="site-state-item-name">posts</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#阻塞I-O模型"><span class="nav-number">1.</span> <span class="nav-text">阻塞I/O模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#非阻塞I-O模型"><span class="nav-number">2.</span> <span class="nav-text">非阻塞I/O模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#I-O多路复用模型"><span class="nav-number">3.</span> <span class="nav-text">I/O多路复用模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#信号驱动I-O模型"><span class="nav-number">4.</span> <span class="nav-text">信号驱动I/O模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#异步I-O模型"><span class="nav-number">5.</span> <span class="nav-text">异步I/O模型</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#五种I-O模型的对比"><span class="nav-number">6.</span> <span class="nav-text">五种I/O模型的对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#同步I-O与异步I-O对比"><span class="nav-number">7.</span> <span class="nav-text">同步I/O与异步I/O对比</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">yipzale</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
