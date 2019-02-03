@@ -104,27 +104,26 @@
 
 
 
-  <meta name="description" content="目前大多数web应用都是读多写少的环境，所以基本都是使用读写分离，即使用主库负责接收写入的请求，从库则负责读取的请求。使用多台数据库机器作为从库，来应对大量的读请求，进而提高web应用的迸发量。">
+  <meta name="description" content="对于同步与异步一直处于似懂非懂的地步，当上网查阅资料的时候，更是云里雾里。看起来比较妥当的解析是“从大的概念上来讲同步和异步关注的是消息通信机制”，但是却将我导向了《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》的第六章中，然而看完却依然无法理解“从大的概念上来讲同步和异步关注的是消息通信">
 <meta property="og:type" content="article">
-<meta property="og:title" content="部署从库">
-<meta property="og:url" content="http://yipzale.me/2018/02/07/mysql-slave.html">
+<meta property="og:title" content="同步与异步">
+<meta property="og:url" content="http://yipzale.me/2019/02/03/sync-and-async.html">
 <meta property="og:site_name" content="yipzale.me">
-<meta property="og:description" content="目前大多数web应用都是读多写少的环境，所以基本都是使用读写分离，即使用主库负责接收写入的请求，从库则负责读取的请求。使用多台数据库机器作为从库，来应对大量的读请求，进而提高web应用的迸发量。">
+<meta property="og:description" content="对于同步与异步一直处于似懂非懂的地步，当上网查阅资料的时候，更是云里雾里。看起来比较妥当的解析是“从大的概念上来讲同步和异步关注的是消息通信机制”，但是却将我导向了《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》的第六章中，然而看完却依然无法理解“从大的概念上来讲同步和异步关注的是消息通信">
 <meta property="og:locale" content="default">
-<meta property="og:image" content="http://res2.yipzale.me/1.png">
-<meta property="og:image" content="http://res2.yipzale.me/QQ20180224-094323.png">
-<meta property="og:updated_time" content="2018-12-20T16:36:45.000Z">
+<meta property="og:image" content="http://res2.yipzale.me/EmbeddedSynchronousSignalling.png">
+<meta property="og:updated_time" content="2019-02-03T07:32:49.000Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="部署从库">
-<meta name="twitter:description" content="目前大多数web应用都是读多写少的环境，所以基本都是使用读写分离，即使用主库负责接收写入的请求，从库则负责读取的请求。使用多台数据库机器作为从库，来应对大量的读请求，进而提高web应用的迸发量。">
-<meta name="twitter:image" content="http://res2.yipzale.me/1.png">
+<meta name="twitter:title" content="同步与异步">
+<meta name="twitter:description" content="对于同步与异步一直处于似懂非懂的地步，当上网查阅资料的时候，更是云里雾里。看起来比较妥当的解析是“从大的概念上来讲同步和异步关注的是消息通信机制”，但是却将我导向了《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》的第六章中，然而看完却依然无法理解“从大的概念上来讲同步和异步关注的是消息通信">
+<meta name="twitter:image" content="http://res2.yipzale.me/EmbeddedSynchronousSignalling.png">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yipzale.me/2018/02/07/mysql-slave.html">
+  <link rel="canonical" href="http://yipzale.me/2019/02/03/sync-and-async.html">
 
 
 
@@ -134,7 +133,7 @@
   };
 </script>
 
-  <title>部署从库 | yipzale.me</title>
+  <title>同步与异步 | yipzale.me</title>
   
 
 
@@ -298,7 +297,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2018/02/07/mysql-slave.html">
+    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2019/02/03/sync-and-async.html">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="yipzale">
@@ -315,7 +314,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">部署从库
+          <h1 class="post-title" itemprop="name headline">同步与异步
 
               
             
@@ -341,24 +340,12 @@
                 
               
 
-              <time title="Created: 2018-02-07 00:00:00" itemprop="dateCreated datePublished" datetime="2018-02-07T00:00:00+08:00">2018-02-07</time>
+              <time title="Created: 2019-02-03 09:29:12 / Modified: 15:32:49" itemprop="dateCreated datePublished" datetime="2019-02-03T09:29:12+08:00">2019-02-03</time>
             
 
             
               
 
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">Edited on</span>
-                
-                <time title="Modified: 2018-12-21 00:36:45" itemprop="dateModified" datetime="2018-12-21T00:36:45+08:00">2018-12-21</time>
               
             
           </span>
@@ -372,8 +359,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/02/07/mysql-slave.html#comments" itemprop="discussionUrl">
-                  <span class="post-meta-item-text">Comments: </span> <span class="post-comments-count valine-comment-count" data-xid="/2018/02/07/mysql-slave.html" itemprop="commentCount"></span>
+                <a href="/2019/02/03/sync-and-async.html#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">Comments: </span> <span class="post-comments-count valine-comment-count" data-xid="/2019/02/03/sync-and-async.html" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -401,29 +388,36 @@
       
 
       
-        <p>目前大多数web应用都是读多写少的环境，所以基本都是使用读写分离，即使用主库负责接收写入的请求，从库则负责读取的请求。使用多台数据库机器作为从库，来应对大量的读请求，进而提高web应用的迸发量。</p>
+        <p>对于同步与异步一直处于似懂非懂的地步，当上网查阅资料的时候，更是云里雾里。看起来比较妥当的解析是“从大的概念上来讲同步和异步关注的是消息通信机制”，但是却将我导向了《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》的第六章中，然而看完却依然无法理解“从大的概念上来讲同步和异步关注的是消息通信机制”，因此看完关于5中I/O模型的介绍之后继续查询关于同步异步的介绍。</p>
 <a id="more"></a>
 <hr>
-<h2 id="Master"><a href="#Master" class="headerlink" title="Master"></a>Master</h2><h3 id="创建帐号用于主从同步"><a href="#创建帐号用于主从同步" class="headerlink" title="创建帐号用于主从同步"></a>创建帐号用于主从同步</h3><p>  进入主库，执行以下命令假设创建账号为mysql-master，密码为mysql-master<br>  <code>grant replication slave on *.* to &#39;mysql-master&#39;@&#39;localhost&#39; identified by &#39;mysql-master&#39;;</code><br>  <code>flush privileges;</code> 刷新权限</p>
-<h3 id="导出数据"><a href="#导出数据" class="headerlink" title="导出数据"></a>导出数据</h3><p>  执行命令<code>mysqldump -uXXX -pXXXX --master-data --single-transaction -R --databases your_db_name &gt; /tmp/db.sql;</code>。这里有两个点，<code>--master-data</code>和<code>--single-transaction</code>。  </p>
+<p>同步和异步的定义，需要看场景。《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》当中限定在了I/O的场景，定义中提及的也是同步I/O、异步I/O。<br>再进行仔细的查阅，发现同步异步确实不仅仅局限于I/O的场景。</p>
+<h2 id="同步与异步"><a href="#同步与异步" class="headerlink" title="同步与异步"></a>同步与异步</h2><p>就像乐队指挥协调乐队成员功能演奏一样，系统也需要有一个协调各个部分运转的同步方法，<a href="https://en.wikipedia.org/wiki/Synchronous_circuit" target="_blank" rel="noopener">同步</a>与<a href="https://en.wikipedia.org/wiki/Asynchronous_system" target="_blank" rel="noopener">异步</a>是其中两种不同的方式。同步依赖于外部共同的一个或者多个时钟实现的同步，而异步则可以不依赖于外部共同的时钟来实现可靠的系统操作（例如分组到达、信号转变、握手协议等）。</p>
+<h2 id="同步传输"><a href="#同步传输" class="headerlink" title="同步传输"></a>同步传输</h2><p>在同步传输中，数据流会转变成电压波动在线路上传输（DATA）如下图所示是两种方式的同步信息。除此之外，还需要单独的传出一段周期性变化的电压波动（CLOCK或者STROBE）。<br><img src="http://res2.yipzale.me/EmbeddedSynchronousSignalling.png" alt=""><br>通过时钟周期才能正确解析出数据流。<br>几乎所有<a href="https://en.wikipedia.org/wiki/Parallel_communication" target="_blank" rel="noopener">并行传输</a>都是使用同步通讯传输，例如在电脑中地址信息、控制总线的读写请求等。</p>
 <ul>
-<li>加上<code>--master-data</code>之后，导出的sql文件的开头会多了一个语句是<code>CHANGE MASTER TO MASTER_LOG_FILE=&#39;mysql-bin.xxx&#39;, MASTER_LOG_POS=xxx;</code>，这里记录了执行数据库导出时候，主库的binlog文件以及其位置，用于后面的从库设置。PS：logfiel和logpos信息可以通过命令<code>show master status;</code><br><img src="http://res2.yipzale.me/1.png" alt=""></li>
-<li>加上<code>--single-transaction</code>之后，有类似于事物的效果，途中数据写入不会对导出的sql造成影响。</li>
+<li>并行传输是对应串行传输的，串行传输一次传输一个bit的数据，而并行传输则是一次传输多个bit的数据。</li>
 </ul>
-<h2 id="Slave"><a href="#Slave" class="headerlink" title="Slave"></a>Slave</h2><h3 id="从库设置"><a href="#从库设置" class="headerlink" title="从库设置"></a>从库设置</h3><p>  进入从库，执行命令<code>CHANGE MASTER TO MASTER_HOST=&#39;mysql-master&#39;,MASTER_USER=&#39;mysql-master&#39;,MASTER_PASSWORD=&#39;mysql-master&#39;;</code>貌似这个可以写在配置文件中，写本文的时候还没有查到。。。</p>
-<h3 id="同步主库数据"><a href="#同步主库数据" class="headerlink" title="同步主库数据"></a>同步主库数据</h3><p>  将之前从主库导出的数据导入到从库中。导入数据的时候会执行到<code>CHANGE MASTER TO MASTER_LOG_FILE=&#39;mysql-bin.xxx&#39;, MASTER_LOG_POS=xxx;</code>，表示从主库的某一个点开始执行同步。</p>
-<h3 id="启动主从同步"><a href="#启动主从同步" class="headerlink" title="启动主从同步"></a>启动主从同步</h3><p>  执行命令<code>start slave</code>，然后使用命令<code>show slave status \G</code>检查Slave_IO_Running 和 Slave_SQL_Running，两项都为yes即可，这样从库就会开始从主库导出数据的那个点往后继续同步数据了。<br>  <img src="http://res2.yipzale.me/QQ20180224-094323.png" alt=""></p>
-<h2 id="问题记录"><a href="#问题记录" class="headerlink" title="问题记录"></a>问题记录</h2><h3 id="Slave-failed-to-initialize-relay-log-info-structure-from-the-repository"><a href="#Slave-failed-to-initialize-relay-log-info-structure-from-the-repository" class="headerlink" title="Slave failed to initialize relay log info structure from the repository"></a>Slave failed to initialize relay log info structure from the repository</h3><h4 id="问题描述与修复"><a href="#问题描述与修复" class="headerlink" title="问题描述与修复"></a>问题描述与修复</h4><p>  使用的docker构建从库，当重新构建从库，执行<code>start slave</code>时候会提示此信息。此时可以执行以下命令修复</p>
-<ul>
-<li><code>stop slave</code></li>
-<li><code>reset slave</code></li>
-<li><code>CHANGE MASTER TO MASTER_LOG_FILE=&#39;mysql-bin.xxx&#39;, MASTER_LOG_POS=xxx;</code>，其中<code>MASTER_LOG_FILE</code>和<code>MASTER_LOG_POS</code>信息请看上面的“导出数据”</li>
-<li><code>start slave</code><br>PS：由于自建的博客，主库的<code>MASTER_LOG_FILE</code>和<code>MASTER_LOG_POS</code>变动不大，所以可以使用此方式，如果是线上运行的服务，不能采用如此粗暴的方式。</li>
+<h2 id="异步传输"><a href="#异步传输" class="headerlink" title="异步传输"></a>异步传输</h2><p>一般异步传输信号，是在DATA的前后添加开始和结束标记，接收方在接收到开始标记之后等待半个或者一个bit之后开始接受数据，最后接收到结束标记的时候完成完成接收。<br>在串行通信，一个典型的异步传输的字结构是<code>START-DATA[0:7]-STOP[0:1]</code>，这个格式需要发送端和接收端在开始通信之前确定下来的。</p>
+<h2 id="优缺点"><a href="#优缺点" class="headerlink" title="优缺点"></a>优缺点</h2><h3 id="异步传输-1"><a href="#异步传输-1" class="headerlink" title="异步传输"></a>异步传输</h3><ul>
+<li>优点<ul>
+<li>简单，不要求发送和接收端同步</li>
+<li>硬件设备便宜</li>
+<li>启动很快，因此很适合不规则间隔的信号，例如接收键盘数据、两套不同速度的应用间通讯。</li>
 </ul>
-<h4 id="扩展信息"><a href="#扩展信息" class="headerlink" title="扩展信息"></a>扩展信息</h4><ul>
-<li><code>restart master</code>和<code>restart slave</code><ul>
-<li><code>restart master</code>重置master的binglog，从000001开始重新记录。此命令一般只用于主从设置最开始，设置master。</li>
-<li><code>restart slave</code>重置slave的relaylog，执行之后从库会从新生成relaylog，重新执行。</li>
+</li>
+<li>缺点<ul>
+<li>由于增加了开始和结束标记，因此传送消息的开销增大了，传输的数据越多，其中没有用的消耗（开始和结束标记）越多</li>
+</ul>
+</li>
+</ul>
+<h3 id="同步传输-1"><a href="#同步传输-1" class="headerlink" title="同步传输"></a>同步传输</h3><ul>
+<li>优点<ul>
+<li>低开销（不需要像异步传输那样携带开始和结束标记），因此更高的吞吐量</li>
+</ul>
+</li>
+<li>缺点<ul>
+<li>相对复杂</li>
+<li>硬件设备更加贵</li>
 </ul>
 </li>
 </ul>
@@ -457,8 +451,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2018/02/07/browser-timing.html" rel="next" title="Chrome浏览器Timing中的信息">
-                <i class="fa fa-chevron-left"></i> Chrome浏览器Timing中的信息
+              <a href="/2019/02/01/io-model.html" rel="next" title="I/O模型">
+                <i class="fa fa-chevron-left"></i> I/O模型
               </a>
             
           </div>
@@ -466,10 +460,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2018/02/24/collect-docker-container-log.html" rel="prev" title="采集docker-container日志">
-                采集docker-container日志 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -582,7 +572,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Master"><span class="nav-number">1.</span> <span class="nav-text">Master</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建帐号用于主从同步"><span class="nav-number">1.1.</span> <span class="nav-text">创建帐号用于主从同步</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#导出数据"><span class="nav-number">1.2.</span> <span class="nav-text">导出数据</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Slave"><span class="nav-number">2.</span> <span class="nav-text">Slave</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#从库设置"><span class="nav-number">2.1.</span> <span class="nav-text">从库设置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#同步主库数据"><span class="nav-number">2.2.</span> <span class="nav-text">同步主库数据</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#启动主从同步"><span class="nav-number">2.3.</span> <span class="nav-text">启动主从同步</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#问题记录"><span class="nav-number">3.</span> <span class="nav-text">问题记录</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Slave-failed-to-initialize-relay-log-info-structure-from-the-repository"><span class="nav-number">3.1.</span> <span class="nav-text">Slave failed to initialize relay log info structure from the repository</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#问题描述与修复"><span class="nav-number">3.1.1.</span> <span class="nav-text">问题描述与修复</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#扩展信息"><span class="nav-number">3.1.2.</span> <span class="nav-text">扩展信息</span></a></li></ol></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#同步与异步"><span class="nav-number">1.</span> <span class="nav-text">同步与异步</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#同步传输"><span class="nav-number">2.</span> <span class="nav-text">同步传输</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#异步传输"><span class="nav-number">3.</span> <span class="nav-text">异步传输</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#优缺点"><span class="nav-number">4.</span> <span class="nav-text">优缺点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#异步传输-1"><span class="nav-number">4.1.</span> <span class="nav-text">异步传输</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#同步传输-1"><span class="nav-number">4.2.</span> <span class="nav-text">同步传输</span></a></li></ol></li></ol></div>
             
 
           </div>
