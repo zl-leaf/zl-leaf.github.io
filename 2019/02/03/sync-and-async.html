@@ -112,7 +112,7 @@
 <meta property="og:description" content="对于同步与异步一直处于似懂非懂的地步，当上网查阅资料的时候，更是云里雾里。看起来比较妥当的解析是“从大的概念上来讲同步和异步关注的是消息通信机制”，但是却将我导向了《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》的第六章中，然而看完却依然无法理解“从大的概念上来讲同步和异步关注的是消息通信">
 <meta property="og:locale" content="default">
 <meta property="og:image" content="http://res2.yipzale.me/EmbeddedSynchronousSignalling.png">
-<meta property="og:updated_time" content="2019-02-03T07:32:49.000Z">
+<meta property="og:updated_time" content="2019-02-03T07:41:28.000Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="同步与异步">
 <meta name="twitter:description" content="对于同步与异步一直处于似懂非懂的地步，当上网查阅资料的时候，更是云里雾里。看起来比较妥当的解析是“从大的概念上来讲同步和异步关注的是消息通信机制”，但是却将我导向了《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》的第六章中，然而看完却依然无法理解“从大的概念上来讲同步和异步关注的是消息通信">
@@ -340,7 +340,7 @@
                 
               
 
-              <time title="Created: 2019-02-03 09:29:12 / Modified: 15:32:49" itemprop="dateCreated datePublished" datetime="2019-02-03T09:29:12+08:00">2019-02-03</time>
+              <time title="Created: 2019-02-03 09:29:12 / Modified: 15:41:28" itemprop="dateCreated datePublished" datetime="2019-02-03T09:29:12+08:00">2019-02-03</time>
             
 
             
@@ -392,7 +392,7 @@
 <a id="more"></a>
 <hr>
 <p>同步和异步的定义，需要看场景。《The Sockets Networking API: UNIX® Network Programming Volume 1, Third Edition》当中限定在了I/O的场景，定义中提及的也是同步I/O、异步I/O。<br>再进行仔细的查阅，发现同步异步确实不仅仅局限于I/O的场景。</p>
-<h2 id="同步与异步"><a href="#同步与异步" class="headerlink" title="同步与异步"></a>同步与异步</h2><p>就像乐队指挥协调乐队成员功能演奏一样，系统也需要有一个协调各个部分运转的同步方法，<a href="https://en.wikipedia.org/wiki/Synchronous_circuit" target="_blank" rel="noopener">同步</a>与<a href="https://en.wikipedia.org/wiki/Asynchronous_system" target="_blank" rel="noopener">异步</a>是其中两种不同的方式。同步依赖于外部共同的一个或者多个时钟实现的同步，而异步则可以不依赖于外部共同的时钟来实现可靠的系统操作（例如分组到达、信号转变、握手协议等）。</p>
+<h2 id="同步与异步"><a href="#同步与异步" class="headerlink" title="同步与异步"></a>同步与异步</h2><p>就像乐队指挥协调乐队成员功能演奏一样，系统也需要有一个协调各个部分运转的协同方法，<a href="https://en.wikipedia.org/wiki/Synchronous_circuit" target="_blank" rel="noopener">同步</a>与<a href="https://en.wikipedia.org/wiki/Asynchronous_system" target="_blank" rel="noopener">异步</a>是其中两种不同的方式。同步依赖于外部共同的一个或者多个时钟实现的同步，而异步则可以不依赖于外部共同的时钟来实现可靠的系统操作（例如分组到达、信号转变、握手协议等）。</p>
 <h2 id="同步传输"><a href="#同步传输" class="headerlink" title="同步传输"></a>同步传输</h2><p>在同步传输中，数据流会转变成电压波动在线路上传输（DATA）如下图所示是两种方式的同步信息。除此之外，还需要单独的传出一段周期性变化的电压波动（CLOCK或者STROBE）。<br><img src="http://res2.yipzale.me/EmbeddedSynchronousSignalling.png" alt=""><br>通过时钟周期才能正确解析出数据流。<br>几乎所有<a href="https://en.wikipedia.org/wiki/Parallel_communication" target="_blank" rel="noopener">并行传输</a>都是使用同步通讯传输，例如在电脑中地址信息、控制总线的读写请求等。</p>
 <ul>
 <li>并行传输是对应串行传输的，串行传输一次传输一个bit的数据，而并行传输则是一次传输多个bit的数据。</li>
@@ -420,6 +420,13 @@
 <li>硬件设备更加贵</li>
 </ul>
 </li>
+</ul>
+<h2 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h2><ul>
+<li><a href="https://en.wikipedia.org/wiki/Comparison_of_synchronous_and_asynchronous_signalling" target="_blank" rel="noopener">Comparison of synchronous and asynchronous signalling</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Asynchronous_system" target="_blank" rel="noopener">Asynchronous system</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Synchronous_circuit" target="_blank" rel="noopener">Synchronous circuit</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Parallel_communication" target="_blank" rel="noopener">Parallel communication</a></li>
+<li><a href="https://en.wikipedia.org/wiki/Serial_communication" target="_blank" rel="noopener">Serial communication</a></li>
 </ul>
 
       
@@ -572,7 +579,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#同步与异步"><span class="nav-number">1.</span> <span class="nav-text">同步与异步</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#同步传输"><span class="nav-number">2.</span> <span class="nav-text">同步传输</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#异步传输"><span class="nav-number">3.</span> <span class="nav-text">异步传输</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#优缺点"><span class="nav-number">4.</span> <span class="nav-text">优缺点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#异步传输-1"><span class="nav-number">4.1.</span> <span class="nav-text">异步传输</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#同步传输-1"><span class="nav-number">4.2.</span> <span class="nav-text">同步传输</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#同步与异步"><span class="nav-number">1.</span> <span class="nav-text">同步与异步</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#同步传输"><span class="nav-number">2.</span> <span class="nav-text">同步传输</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#异步传输"><span class="nav-number">3.</span> <span class="nav-text">异步传输</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#优缺点"><span class="nav-number">4.</span> <span class="nav-text">优缺点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#异步传输-1"><span class="nav-number">4.1.</span> <span class="nav-text">异步传输</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#同步传输-1"><span class="nav-number">4.2.</span> <span class="nav-text">同步传输</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
             
 
           </div>
