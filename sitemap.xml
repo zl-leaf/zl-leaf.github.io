@@ -2,6 +2,20 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yipzale.me/2019/02/05/tls-handshaking.html</loc>
+    
+    <lastmod>2019-02-05T13:12:18.000Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yipzale.me/2019/02/01/io-model.html</loc>
+    
+    <lastmod>2019-02-03T07:58:26.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yipzale.me/2018/07/19/ts-and-nts.html</loc>
     
     <lastmod>2019-02-03T07:55:53.000Z</lastmod>
@@ -33,13 +47,6 @@
     <loc>http://yipzale.me/2018/06/07/login-studing.html</loc>
     
     <lastmod>2019-02-03T07:54:07.000Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://yipzale.me/2019/02/01/io-model.html</loc>
-    
-    <lastmod>2019-02-03T07:53:34.000Z</lastmod>
     
   </url>
   

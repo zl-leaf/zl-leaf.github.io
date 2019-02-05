@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="工作中一次机缘巧合下，碰到了一次使用curl请求第三方接口报错，日志中记录报错信息是ssl connect error。这套请求的代码是一个公共方法，调用其他第三方接口的时候并没有异常，但是这次却遇到了这样的问题，第三方那边也没有提供有用的信息，因此只能自己排查了。最终排查的结果是使用ssl进行握手的时候，我方服务器上支持的加密算法没有一个与第三方服务器支持的加密算法匹配上，因此最后只能对我方服务">
+<meta name="keywords" content="ssl,tls,handshaking">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SSL&#x2F;TLS握手过程">
+<meta property="og:url" content="http://yipzale.me/2019/02/05/tls-handshaking.html">
+<meta property="og:site_name" content="yipzale.me">
+<meta property="og:description" content="工作中一次机缘巧合下，碰到了一次使用curl请求第三方接口报错，日志中记录报错信息是ssl connect error。这套请求的代码是一个公共方法，调用其他第三方接口的时候并没有异常，但是这次却遇到了这样的问题，第三方那边也没有提供有用的信息，因此只能自己排查了。最终排查的结果是使用ssl进行握手的时候，我方服务器上支持的加密算法没有一个与第三方服务器支持的加密算法匹配上，因此最后只能对我方服务">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2019-02-05T13:12:18.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SSL&#x2F;TLS握手过程">
+<meta name="twitter:description" content="工作中一次机缘巧合下，碰到了一次使用curl请求第三方接口报错，日志中记录报错信息是ssl connect error。这套请求的代码是一个公共方法，调用其他第三方接口的时候并没有异常，但是这次却遇到了这样的问题，第三方那边也没有提供有用的信息，因此只能自己排查了。最终排查的结果是使用ssl进行握手的时候，我方服务器上支持的加密算法没有一个与第三方服务器支持的加密算法匹配上，因此最后只能对我方服务">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yipzale.me/2019/02/05/tls-handshaking.html">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>SSL/TLS握手过程 | yipzale.me</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">yipzale.me</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="Toggle navigation bar">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>Home</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>Archives</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+    
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2019/02/05/tls-handshaking.html">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="yipzale">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="yipzale.me">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">SSL/TLS握手过程
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+
+              
+                
+              
+
+              <time title="Created: 2019-02-05 09:31:18 / Modified: 21:12:18" itemprop="dateCreated datePublished" datetime="2019-02-05T09:31:18+08:00">2019-02-05</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2019/02/05/tls-handshaking.html#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">Comments: </span> <span class="post-comments-count valine-comment-count" data-xid="/2019/02/05/tls-handshaking.html" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>工作中一次机缘巧合下，碰到了一次使用curl请求第三方接口报错，日志中记录报错信息是<code>ssl connect error</code>。这套请求的代码是一个公共方法，调用其他第三方接口的时候并没有异常，但是这次却遇到了这样的问题，第三方那边也没有提供有用的信息，因此只能自己排查了。最终排查的结果是使用ssl进行握手的时候，我方服务器上支持的加密算法没有一个与第三方服务器支持的加密算法匹配上，因此最后只能对我方服务器上的NSS（与OpenSSL一样是是提供SSL/TLS的开源实现，RedHat服务器的curl默认使用NSS，所以我方服务器一直是NSS）进行升级，这里记录一下SSL/TLS协议的握手过程。<br><a id="more"></a></p>
+<h2 id="HTTPS建立连接的过程"><a href="#HTTPS建立连接的过程" class="headerlink" title="HTTPS建立连接的过程"></a>HTTPS建立连接的过程</h2><p>通过openssl工具查看https的握手过程，以百度为例子，通过命令<code>openssl s_client -connect www.baidu.com:443 -state</code>可以看到如下信息：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">CONNECTED(00000003)</span><br><span class="line">SSL_connect:before/connect initialization</span><br><span class="line">SSL_connect:SSLv2/v3 write client hello A</span><br><span class="line">SSL_connect:SSLv3 read server hello A</span><br><span class="line">depth=2 C = BE, O = GlobalSign nv-sa, OU = Root CA, CN = GlobalSign Root CA</span><br><span class="line">verify return:1</span><br><span class="line">depth=1 C = BE, O = GlobalSign nv-sa, CN = GlobalSign Organization Validation CA - SHA256 - G2</span><br><span class="line">verify return:1</span><br><span class="line">depth=0 C = CN, ST = beijing, L = beijing, OU = service operation department, O = &quot;Beijing Baidu Netcom Science Technology Co., Ltd&quot;, CN = baidu.com</span><br><span class="line">verify return:1</span><br><span class="line">SSL_connect:SSLv3 read server certificate A</span><br><span class="line">SSL_connect:SSLv3 read server key exchange A</span><br><span class="line">SSL_connect:SSLv3 read server done A</span><br><span class="line">SSL_connect:SSLv3 write client key exchange A</span><br><span class="line">SSL_connect:SSLv3 write change cipher spec A</span><br><span class="line">SSL_connect:SSLv3 write finished A</span><br><span class="line">SSL_connect:SSLv3 flush data</span><br><span class="line">SSL_connect:SSLv3 read server session ticket A</span><br><span class="line">SSL_connect:SSLv3 read finished A</span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">.....</span><br></pre></td></tr></table></figure></p>
+<p>以上信息可以看出SSL/TLS握手的过程，下面将讲述客户端和服务端发送的消息</p>
+<h3 id="The-Hello-Exchange"><a href="#The-Hello-Exchange" class="headerlink" title="The Hello Exchange"></a>The Hello Exchange</h3><h4 id="Client-Hello"><a href="#Client-Hello" class="headerlink" title="Client Hello"></a>Client Hello</h4><p>由客户端发送到服务端，包含以下信息：</p>
+<ul>
+<li><code>Protocol Version</code>:客户端希望使用的SSL/TLS版本</li>
+<li><code>Random</code>:客户端生成的一个随机数（《SSL Introduction with Sample Transaction and Packet Exchange - Cisco》中没有提及到，不过可以在其截图中看到Random参数）</li>
+<li><code>Session ID</code>:客户端希望这次连接使用的session的ID，第一次通讯为空</li>
+<li><code>Cipher Suite</code>:客户端支持的加密算法</li>
+</ul>
+<h4 id="Server-Hello"><a href="#Server-Hello" class="headerlink" title="Server Hello"></a>Server Hello</h4><p>服务端接收到客户端的<code>client hello</code>之后的回复，包含以下信息</p>
+<ul>
+<li><code>Protocol Version</code>最终选定的SSL/TLS版本</li>
+<li><code>Session ID</code>:如果客户端发送的<code>client hello</code>带有有效的<code>Session ID</code>，而且服务端在cache中存在此ID，则返回此<code>Session ID</code>，否则创建一个新的<code>Session ID</code>返回。</li>
+<li><code>Cipher Suite</code>:服务端从客户端支持的加密算法中选择其中一种加密算法。</li>
+<li><code>Compression Method</code>:服务端从客户端支持的压缩方式中选择其中一种。</li>
+<li><code>Extensions</code>:可选，客户端可以提供的参数，可以用于服务端验证客户端的身份。</li>
+</ul>
+<h4 id="Server-Certificate-Server-Key-Exchange-and-Certificate-Request-Optional"><a href="#Server-Certificate-Server-Key-Exchange-and-Certificate-Request-Optional" class="headerlink" title="Server Certificate, Server Key Exchange, and Certificate Request (Optional)"></a>Server Certificate, Server Key Exchange, and Certificate Request (Optional)</h4><ul>
+<li><code>Server Certificate</code>:服务端的证书，跟随在<code>Server Hello</code>消息之后。</li>
+<li><code>Server Key Exchange</code>：当服务端没有证书或者证书中没有足够多的信息让客户端进行<code>premaster secret</code>的交换的时候发送此参数<ul>
+<li>需要<code>Server Key Exchange</code>的交换算法：DHE_DSS、DHE_RSA、DH_anon</li>
+<li>不需要<code>Server Key Exchange</code>的交换算法：RSA、DH_DSS、DH_RSA</li>
+</ul>
+</li>
+<li><code>Certificate Request</code>：服务端可以要求客户端的证书</li>
+</ul>
+<h4 id="Server-Hello-Done"><a href="#Server-Hello-Done" class="headerlink" title="Server Hello Done"></a>Server Hello Done</h4><p>服务端在发送<code>Server Hello</code>之后发送<code>Server Hello Done</code>，表示消息结束。客户端在接收此消息之前，会验证服务端的证书，还有<code>Server Hello</code>的参数（如果需要）</p>
+<h3 id="Client-Exchange"><a href="#Client-Exchange" class="headerlink" title="Client Exchange"></a>Client Exchange</h3><h4 id="Client-Certificate-可选"><a href="#Client-Certificate-可选" class="headerlink" title="Client Certificate (可选)"></a>Client Certificate (可选)</h4><p>客户端接收到<code>Server Hello Done</code>之后发送的消息，只有当服务端要求的时候才发送，如果没有合适的证书，则发送<code>no_certificate</code>。服务端可以根据自身设定中断握手，或者继续执行。</p>
+<h4 id="Client-Key-Exchange"><a href="#Client-Key-Exchange" class="headerlink" title="Client Key Exchange"></a>Client Key Exchange</h4><p>这个参数的内容，与<code>The Hello Exchange</code>阶段时候客户端与服务端协商的交换算法有关系</p>
+<ul>
+<li>RSA：客户端会创建一个48-byte的<code>premaster secret</code>，使用服务端的公钥对其进行加密，服务端使用私钥解密出<code>premaster secret</code>，然后双方将<code>premaster secret</code>转换成<code>master secret</code>(转换方式见<a href="https://tools.ietf.org/html/rfc5246#section-8.1" target="_blank" rel="noopener">Computing the Master Secret</a>)</li>
+<li>Diffie-Hellman:传送的是一个<code>public value</code>（简称Yc），而服务端的证书中也会附带有用于DH算法的参数，客户端与服务端可以计算出相同的<code>premaster secret</code>，然后转换成<code>master secret</code>。<h5 id="pre-master-secret转换成master-secret"><a href="#pre-master-secret转换成master-secret" class="headerlink" title="pre_master_secret转换成master_secret"></a>pre_master_secret转换成master_secret</h5>master_secret = PRF(pre_master_secret, “master secret”, ClientHello.random + ServerHello.random)[0..47];</li>
+</ul>
+<h4 id="Certificate-Verify-可选"><a href="#Certificate-Verify-可选" class="headerlink" title="Certificate Verify (可选)"></a>Certificate Verify (可选)</h4><p>当服务端需要验证客户端的时候需要带上此参数。</p>
+<h3 id="Cipher-Change"><a href="#Cipher-Change" class="headerlink" title="Cipher Change"></a>Cipher Change</h3><h4 id="Change-Cipher-Spec-Protocol"><a href="#Change-Cipher-Spec-Protocol" class="headerlink" title="Change Cipher Spec Protocol"></a>Change Cipher Spec Protocol</h4><p>加密策略变更协议存在，表示加密策略的变更。这个协议包括一个消息，用当前等加密策略来加密和压缩。客户端和服务端双方都需要发送变更消息，用于通知接收方，接下来的内容将会使用新的加密策略和key进行处理。发送了加密策略变更消息一方，发送忙马上使用新的加密策略处理写出的数据，而接收到加密策略变更消息的一方，马上使用新的加密策略来出路读取的数据。</p>
+<ul>
+<li>注意：如果在接下来发生了重新握手，通讯放也许会使用旧的加密策略。然而只要加密策略变更消息发送之后，就必须使用新的加密策略。最先发送加密策略变更消息的一方，不知道另一方是否已经完成了新密钥的生成（如果由于公钥操作太耗时间，可能会比较慢）。因此有会有一个很小的时间窗口，接收方会缓存接收到的数据。</li>
+</ul>
+<h4 id="Finished-Messages"><a href="#Finished-Messages" class="headerlink" title="Finished Messages"></a>Finished Messages</h4><p>当发送完加密策略变更消息之后发送此消息，为了校验密钥交换与认证过程是否成功。加密策略变更消息的接收方的时机必须在其他握手消息与<code>Finished Message</code>之间。<br><code>Finished Message</code>是使用新的加密方式、新的算法和新的密钥进行加密的第一条消息，接收方需要校验信息是否正确。当一方发送了<code>Finished Message</code>、接收到了<code>Finished Message</code>并且校验接收到的<code>Finished Message</code>之后，就可以开始发送或者接收应用层的消息了。</p>
+<h2 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h2><ul>
+<li><a href="https://tools.ietf.org/html/rfc5246" target="_blank" rel="noopener">RFC 5246 - The Transport Layer Security (TLS) Protocol Version 1.2</a></li>
+<li><a href="https://www.cisco.com/c/en/us/support/docs/security-vpn/secure-socket-layer-ssl/116181-technote-product-00.html" target="_blank" rel="noopener">SSL Introduction with Sample Transaction and Packet Exchange - Cisco</a></li>
+<li><a href="http://www.ruanyifeng.com/blog/2014/09/illustration-ssl.html" target="_blank" rel="noopener">图解SSL/TLS协议</a></li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/02/03/sync-and-async.html" rel="next" title="同步与异步">
+                <i class="fa fa-chevron-left"></i> 同步与异步
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            Overview
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <p class="site-author-name" itemprop="name">yipzale</p>
+              <p class="site-description motion-element" itemprop="description"></p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">12</span>
+                    <span class="site-state-item-name">posts</span>
+                  </a>
+                </div>
+              
+
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#HTTPS建立连接的过程"><span class="nav-number">1.</span> <span class="nav-text">HTTPS建立连接的过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#The-Hello-Exchange"><span class="nav-number">1.1.</span> <span class="nav-text">The Hello Exchange</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Client-Hello"><span class="nav-number">1.1.1.</span> <span class="nav-text">Client Hello</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Server-Hello"><span class="nav-number">1.1.2.</span> <span class="nav-text">Server Hello</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Server-Certificate-Server-Key-Exchange-and-Certificate-Request-Optional"><span class="nav-number">1.1.3.</span> <span class="nav-text">Server Certificate, Server Key Exchange, and Certificate Request (Optional)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Server-Hello-Done"><span class="nav-number">1.1.4.</span> <span class="nav-text">Server Hello Done</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Client-Exchange"><span class="nav-number">1.2.</span> <span class="nav-text">Client Exchange</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Client-Certificate-可选"><span class="nav-number">1.2.1.</span> <span class="nav-text">Client Certificate (可选)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Client-Key-Exchange"><span class="nav-number">1.2.2.</span> <span class="nav-text">Client Key Exchange</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#pre-master-secret转换成master-secret"><span class="nav-number">1.2.2.1.</span> <span class="nav-text">pre_master_secret转换成master_secret</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Certificate-Verify-可选"><span class="nav-number">1.2.3.</span> <span class="nav-text">Certificate Verify (可选)</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Cipher-Change"><span class="nav-number">1.3.</span> <span class="nav-text">Cipher Change</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Change-Cipher-Spec-Protocol"><span class="nav-number">1.3.1.</span> <span class="nav-text">Change Cipher Spec Protocol</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Finished-Messages"><span class="nav-number">1.3.2.</span> <span class="nav-text">Finished Messages</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#参考资料"><span class="nav-number">2.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">yipzale</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">Powered by <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">Theme – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+  <script src="//cdn1.lncld.net/static/js/3.0.4/av-min.js"></script>
+  
+  
+  <script src="//unpkg.com/valine/dist/Valine.min.js"></script>
+
+  <script>
+    var GUEST = ['nick','mail','link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(function (item) {
+      return GUEST.indexOf(item)>-1;
+    });
+    new Valine({
+        el: '#comments' ,
+        verify: false,
+        notify: false,
+        appId: 'kdpWlgD0yNvwOoHjfNIg6nhI-gzGzoHsz',
+        appKey: '1BNeHkXJPtLUSorQYHTILQc0',
+        placeholder: 'Just go go',
+        avatar:'mm',
+        meta:guest,
+        pageSize:'10' || 10,
+        visitor: false
+    });
+  </script>
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
