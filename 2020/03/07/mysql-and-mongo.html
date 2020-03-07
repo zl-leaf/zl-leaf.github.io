@@ -104,25 +104,25 @@
 
 
 
-  <meta name="description" content="mysql有很多日志文件，这些日志文件用于一些关键性的功能，例如主从同步的实现需要binglog和relaylog，redolog帮助mysql解决了大量IO问题以及事务未提交时候服务器异常导致数据丢失的问题，undolog用于事务回滚。学习mysql的重要机制的时候需要了解当中诸如日志文件等细节。">
-<meta name="keywords" content="mysql,mysql日志,bin log,relay log,redo log,undo log">
+  <meta name="description" content="终于有机会在实际工作中使用mongodb了，毕竟之前都只是稍稍玩一下，没有在真正接触之前就是各种好，感觉mysql简直差得远了，业务多变，加个字段都要锁表，数据量大嘛，分表又得依赖中间件，官方还没有提供方案的那种。但是实际用过mongodb之后，感觉mysql其实也是很可爱的。">
+<meta name="keywords" content="yipzale,blog">
 <meta property="og:type" content="article">
-<meta property="og:title" content="mysql log日志">
-<meta property="og:url" content="http://yipzale.me/2018/07/03/mysql-log.html">
+<meta property="og:title" content="第一次生产中使用mongodb">
+<meta property="og:url" content="http://yipzale.me/2020/03/07/mysql-and-mongo.html">
 <meta property="og:site_name" content="yipzale.me">
-<meta property="og:description" content="mysql有很多日志文件，这些日志文件用于一些关键性的功能，例如主从同步的实现需要binglog和relaylog，redolog帮助mysql解决了大量IO问题以及事务未提交时候服务器异常导致数据丢失的问题，undolog用于事务回滚。学习mysql的重要机制的时候需要了解当中诸如日志文件等细节。">
+<meta property="og:description" content="终于有机会在实际工作中使用mongodb了，毕竟之前都只是稍稍玩一下，没有在真正接触之前就是各种好，感觉mysql简直差得远了，业务多变，加个字段都要锁表，数据量大嘛，分表又得依赖中间件，官方还没有提供方案的那种。但是实际用过mongodb之后，感觉mysql其实也是很可爱的。">
 <meta property="og:locale" content="default">
-<meta property="og:updated_time" content="2019-02-03T07:55:09.000Z">
+<meta property="og:updated_time" content="2020-03-07T06:14:03.798Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="mysql log日志">
-<meta name="twitter:description" content="mysql有很多日志文件，这些日志文件用于一些关键性的功能，例如主从同步的实现需要binglog和relaylog，redolog帮助mysql解决了大量IO问题以及事务未提交时候服务器异常导致数据丢失的问题，undolog用于事务回滚。学习mysql的重要机制的时候需要了解当中诸如日志文件等细节。">
+<meta name="twitter:title" content="第一次生产中使用mongodb">
+<meta name="twitter:description" content="终于有机会在实际工作中使用mongodb了，毕竟之前都只是稍稍玩一下，没有在真正接触之前就是各种好，感觉mysql简直差得远了，业务多变，加个字段都要锁表，数据量大嘛，分表又得依赖中间件，官方还没有提供方案的那种。但是实际用过mongodb之后，感觉mysql其实也是很可爱的。">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yipzale.me/2018/07/03/mysql-log.html">
+  <link rel="canonical" href="http://yipzale.me/2020/03/07/mysql-and-mongo.html">
 
 
 
@@ -132,7 +132,7 @@
   };
 </script>
 
-  <title>mysql log日志 | yipzale.me</title>
+  <title>第一次生产中使用mongodb | yipzale.me</title>
   
 
 
@@ -296,7 +296,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2018/07/03/mysql-log.html">
+    <link itemprop="mainEntityOfPage" href="http://yipzale.me/2020/03/07/mysql-and-mongo.html">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="yipzale">
@@ -313,7 +313,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">mysql log日志
+          <h1 class="post-title" itemprop="name headline">第一次生产中使用mongodb
 
               
             
@@ -339,24 +339,12 @@
                 
               
 
-              <time title="Created: 2018-07-03 03:12:34" itemprop="dateCreated datePublished" datetime="2018-07-03T03:12:34+08:00">2018-07-03</time>
+              <time title="Created: 2020-03-07 12:54:33 / Modified: 14:14:03" itemprop="dateCreated datePublished" datetime="2020-03-07T12:54:33+08:00">2020-03-07</time>
             
 
             
               
 
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">Edited on</span>
-                
-                <time title="Modified: 2019-02-03 15:55:09" itemprop="dateModified" datetime="2019-02-03T15:55:09+08:00">2019-02-03</time>
               
             
           </span>
@@ -370,8 +358,8 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/07/03/mysql-log.html#comments" itemprop="discussionUrl">
-                  <span class="post-meta-item-text">Comments: </span> <span class="post-comments-count valine-comment-count" data-xid="/2018/07/03/mysql-log.html" itemprop="commentCount"></span>
+                <a href="/2020/03/07/mysql-and-mongo.html#comments" itemprop="discussionUrl">
+                  <span class="post-meta-item-text">Comments: </span> <span class="post-comments-count valine-comment-count" data-xid="/2020/03/07/mysql-and-mongo.html" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -399,24 +387,18 @@
       
 
       
-        <p>mysql有很多日志文件，这些日志文件用于一些关键性的功能，例如主从同步的实现需要binglog和relaylog，redolog帮助mysql解决了大量IO问题以及事务未提交时候服务器异常导致数据丢失的问题，undolog用于事务回滚。学习mysql的重要机制的时候需要了解当中诸如日志文件等细节。</p>
+        <p>终于有机会在实际工作中使用mongodb了，毕竟之前都只是稍稍玩一下，没有在真正接触之前就是各种好，感觉mysql简直差得远了，业务多变，加个字段都要锁表，数据量大嘛，分表又得依赖中间件，官方还没有提供方案的那种。但是实际用过mongodb之后，感觉mysql其实也是很可爱的。</p>
 <a id="more"></a>
 <hr>
-<h1 id="数据库log文件"><a href="#数据库log文件" class="headerlink" title="数据库log文件"></a>数据库log文件</h1><h2 id="bin-log与relay-log"><a href="#bin-log与relay-log" class="headerlink" title="bin log与relay log"></a>bin log与relay log</h2><h3 id="bin-log"><a href="#bin-log" class="headerlink" title="bin log"></a>bin log</h3><p>记录数据库上所有变更，以二进制的形式保存在磁盘中。语句以“事件”的形式保存，它描述数据更改。主要用于查看数据库变更历史、数据库增量备份和恢复、数据库的主从同步。<br>每个事务提交之前，数据的变更会记录到bin log中（串行地写入），记录日志完成之后会通知存储引擎提交事务。</p>
-<h3 id="relay-log"><a href="#relay-log" class="headerlink" title="relay log"></a>relay log</h3><p>与bin log一样，是一系列包含数据库变更记录的文件，以及一个索引文件（记录当前使用的relay log 文件）。主库的bing log传到从库的relay log中，然后从库从relay log执行备份，实现主从同步。</p>
-<h3 id="主从同步"><a href="#主从同步" class="headerlink" title="主从同步"></a>主从同步</h3><p>salve打开一个IO线程，IO线程在master打开一个普通连接，开始binlog dump process。<br>Binlog dump process从master的二进制日志中读取事件，如果已经跟上master，它会睡眠并等待master产生新的事件。I/O线程将这些事件写入中继日志。中继日志通常会位于OS的缓存中，所以中继日志的开销很小。<br>SQL线程从中继日志读取事件，更新slave的数据，使其与master中的数据一致。</p>
-<h2 id="Redo-log"><a href="#Redo-log" class="headerlink" title="Redo log"></a>Redo log</h2><h3 id="buffer-pool"><a href="#buffer-pool" class="headerlink" title="buffer pool"></a>buffer pool</h3><p>InnoDB有buffer pool（简称bp）。bp是数据库页面的缓存，对InnoDB的任何修改操作都会首先在bp的page上进行，然后这样的页面将被标记为dirty并被放到专门的flush list上，后续将由master thread或专门的刷脏线程阶段性的将这些页面写入磁盘（disk or ssd）。这样的好处是避免每次写操作都操作磁盘导致大量的随机IO，阶段性的刷脏可以将多次对页面的修改merge成一次IO操作，同时异步写入也降低了访问的时延。</p>
-<h3 id="Redo-log作用"><a href="#Redo-log作用" class="headerlink" title="Redo log作用"></a>Redo log作用</h3><p>如果在dirty page还未刷入磁盘时，server非正常关闭，这些修改操作将会丢失，如果写入操作正在进行，甚至会由于损坏数据文件导致数据库不可用。为了避免上述问题的发生，Innodb将所有对页面的修改操作写入一个专门的文件，并在数据库启动时从此文件进行恢复操作，这个文件就是redo log file。<br>这样的技术推迟了bp页面的刷新，从而提升了数据库的吞吐，有效的降低了访问时延。带来的问题是额外的写redo log操作的开销，以及数据库启动时恢复操作所需的时间。<br>Redo log和Binlog的区别</p>
+<h3 id="使用背景"><a href="#使用背景" class="headerlink" title="使用背景"></a>使用背景</h3><p>业务是游戏运营，除了一般的后台之外，还需要管理大量的数据，这个量又不到非要使用hadoop和spark之类，毕竟无论是维护还是价格上成本都不低。之前都是使用mysql来进行日志数据和报表数据的储存的。实际使用中mysql会有诸多不方便，后来终于实际使用了mongodb来替换mysql，本篇是记录使用中的差别，其实mongodb没有想象中的万能，mysql也没有想象中的差。</p>
+<h3 id="不同业务中的使用感想"><a href="#不同业务中的使用感想" class="headerlink" title="不同业务中的使用感想"></a>不同业务中的使用感想</h3><h4 id="日志储存"><a href="#日志储存" class="headerlink" title="日志储存"></a>日志储存</h4><p>要储存收集来的数据，需要解决几个问题。写入速度、文件保存的问题。</p>
 <ul>
-<li>Redo log是在INNODB存储引擎层产生的，而Bin log则是在Mysql层产生的（Mysql下任何存储引擎都可以生成Bin log）。</li>
-<li>两种日志的写入时间不一样。Redo log是在事务中（事务没提交）会不停写入，而Bin log则是在事务提交之后才被写入。</li>
+<li>写入。在写性能上，mongodb会更胜一筹，不过我们有使用队列来处理数据，原始数据进入队列，然后经过一步一步的处理之后才进行数据库的写入操作，因此这个写入的问题并没有太大的影响。</li>
+<li>文件保存。mongo官方则提供了完善的集群方案，简单地实现mongodb集群搭建，另外mongodb的ReplicaSet让数据备份更加方便，反观mysql，做分表只能依赖非官方的中间件，表一大了，从库就不好做了。之前对于mysql的处理方案是使用冷热数据的处理方式，只保留热数据（例如最近3个月的数据），其他数据迁移到一个冷数据表中，操作起来还是挺香的，缺陷就是统计时候会有麻烦（后面说）。</li>
 </ul>
-<h3 id="Undo-Log"><a href="#Undo-Log" class="headerlink" title="Undo Log"></a>Undo Log</h3><p>Undo log是一种日志，日志中记录对于数据库的反向操作。<br>由于事务的原子性，事务中的所有操作，要么全部完成，要么不做任何操作，不能只做部分操作。如果在执行的过程中发了错误，要回滚(Rollback)。回滚的时候就需要借助Undo log。</p>
-<p>转载：</p>
-<ul>
-<li><a href="http://www.cnblogs.com/liuhao/p/3714012.html" target="_blank" rel="noopener">http://www.cnblogs.com/liuhao/p/3714012.html</a></li>
-<li><a href="https://blog.csdn.net/bigtree_3721/article/details/51010463" target="_blank" rel="noopener">https://blog.csdn.net/bigtree_3721/article/details/51010463</a></li>
-</ul>
+<h4 id="报表统计"><a href="#报表统计" class="headerlink" title="报表统计"></a>报表统计</h4><p>要说数据，肯定离不开报表汇总，我们的数据除了要满足整公司的各个部门，统计维度自然多，例如根据游戏汇总、根据渠道包汇总、根据用户汇总、根据投放渠道汇总等。<br>在汇总上，无论是mongodb还是mysql，都是使用中间表的方案，即先将日志表根据维度先汇总成一张张大表，例如按日期+游戏+渠道表的维度汇总激活、登录、付费等数据，然后实际使用的报表则是建立在这些中间表之上，通过对中间表的指定维度汇总出业务部门需要的数据。<br>虽然mysql没有使用分表结构，但是冷热数据表+分区方案就非常够用了。报表的处理，除了单表汇总之外。还会出现多表的联合汇总的，例如要某天登录数+注册数+留存2、3、4。。。60。对于登录、注册信息是放在一张表，而留存这里则是通过另外一个注册日期+登录日志维度的表来汇总的，这种情况下，mysql只要建立好适当的索引，及时join之后也是没有问题，但是mongodb呢？lookup？不要提它，提起就来气，而且mongodb在project或者unwind之后是无法使用索引的。最后在mongodb上的处理方案是再增加一个表来记录天维度的留存2、3、4、。。。。60。<br>而且由于InnoDB使用B+树结构，而mongodb采用B数结构，所以mysql在范围搜索上要优于mongodb，但是如果是唯一索引搜索这一类就mongodb要更优秀了。</p>
+<h4 id="业务变化导致结构修改"><a href="#业务变化导致结构修改" class="headerlink" title="业务变化导致结构修改"></a>业务变化导致结构修改</h4><p>这个情况会更加多，由于业务需要知道某些信息，需要在日志或者汇总表中增加字段，mysql的表结构修改灾难就来了，因为mysql修改表结构是要锁表的呀，mongodb就随意了，不过mongodb字段是有类型的，一开始的时候就会因为不小心因为储存id的时候使用了string类型，导致在搜索的时候要将id由int类型转化成string才能搜索，于是后面还是为mongodb的写入逻辑成增加了schema配置，不过总体上来说mongodb在这一场景下是比mysql方便很多的。</p>
+<h3 id="总体感受"><a href="#总体感受" class="headerlink" title="总体感受"></a>总体感受</h3><p>myslq在大数据时代是有被拉下的感觉了（虽然绝大部分公司都用不上大数据），而新诞生的mongodb更好的顺应了这个大数据时代，无论是分布式方案还是提供更加丰富的搜索方法上都要优于mysql，不过会有一种怪胎的感觉，抛弃了schema之后真的很容易变成一个垃圾场，另外在范围搜索和聚合上明显的吃力。比较倾向是mongodb来做日志储存，然后中间表上则使用mysql配合冷热数据处理。最近听说在尝试hadoop，不知道啥时候能用上哎。</p>
 
       
     </div>
@@ -447,8 +429,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2018/06/07/login-studing.html" rel="next" title="授权认证相关学习资料">
-                <i class="fa fa-chevron-left"></i> 授权认证相关学习资料
+              <a href="/2019/02/05/tls-handshaking.html" rel="next" title="SSL/TLS握手过程">
+                <i class="fa fa-chevron-left"></i> SSL/TLS握手过程
               </a>
             
           </div>
@@ -456,10 +438,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2018/07/19/ts-and-nts.html" rel="prev" title="PHP的线程安全与非线程安全">
-                PHP的线程安全与非线程安全 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -572,7 +550,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#数据库log文件"><span class="nav-number">1.</span> <span class="nav-text">数据库log文件</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#bin-log与relay-log"><span class="nav-number">1.1.</span> <span class="nav-text">bin log与relay log</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#bin-log"><span class="nav-number">1.1.1.</span> <span class="nav-text">bin log</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#relay-log"><span class="nav-number">1.1.2.</span> <span class="nav-text">relay log</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#主从同步"><span class="nav-number">1.1.3.</span> <span class="nav-text">主从同步</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Redo-log"><span class="nav-number">1.2.</span> <span class="nav-text">Redo log</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#buffer-pool"><span class="nav-number">1.2.1.</span> <span class="nav-text">buffer pool</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Redo-log作用"><span class="nav-number">1.2.2.</span> <span class="nav-text">Redo log作用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Undo-Log"><span class="nav-number">1.2.3.</span> <span class="nav-text">Undo Log</span></a></li></ol></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#使用背景"><span class="nav-number">1.</span> <span class="nav-text">使用背景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#不同业务中的使用感想"><span class="nav-number">2.</span> <span class="nav-text">不同业务中的使用感想</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#日志储存"><span class="nav-number">2.1.</span> <span class="nav-text">日志储存</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#报表统计"><span class="nav-number">2.2.</span> <span class="nav-text">报表统计</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#业务变化导致结构修改"><span class="nav-number">2.3.</span> <span class="nav-text">业务变化导致结构修改</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总体感受"><span class="nav-number">3.</span> <span class="nav-text">总体感受</span></a></li></ol></div>
             
 
           </div>

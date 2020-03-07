@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yipzale.me/2020/03/07/mysql-and-mongo.html</loc>
+    
+    <lastmod>2020-03-07T06:14:03.798Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yipzale.me/2019/02/05/tls-handshaking.html</loc>
     
     <lastmod>2019-02-05T13:12:18.000Z</lastmod>
